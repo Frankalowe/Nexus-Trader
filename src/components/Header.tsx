@@ -42,20 +42,20 @@ export function Header({ currentSymbol, onSymbolChange, signal, onAnalyze, isAna
                     </span>
                 </Link>
 
-                {/* Asset Switcher - Scrollable on mobile */}
-                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5 overflow-x-auto no-scrollbar max-w-[120px] xs:max-w-none">
+                {/* Asset Switcher - Scrollable on mobile, expanded on desktop */}
+                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5 overflow-x-auto no-scrollbar max-w-[120px] xs:max-w-none md:flex-1 md:justify-start">
                     {ASSETS.map((item) => (
                         <button
                             key={item.symbol}
                             onClick={() => onSymbolChange(item.symbol)}
                             className={cn(
-                                "px-2.5 md:px-3 py-1.5 text-[10px] md:text-xs font-bold rounded-lg transition-all whitespace-nowrap",
+                                "px-2.5 md:px-4 py-1.5 text-[10px] md:text-sm font-bold rounded-lg transition-all whitespace-nowrap",
                                 currentSymbol === item.symbol
                                     ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30"
                                     : "text-zinc-400 hover:text-white hover:bg-white/5"
                             )}
                         >
-                            {item.name.replace('USD', '')}
+                            {item.name}
                         </button>
                     ))}
                 </div>
@@ -79,22 +79,22 @@ export function Header({ currentSymbol, onSymbolChange, signal, onAnalyze, isAna
                             </span>
                         </div>
 
-                        <div className="flex items-center gap-2 md:gap-6 overflow-hidden">
+                        <div className="flex items-center gap-3 md:gap-8 overflow-hidden">
                             <div className="flex flex-col min-w-0">
                                 <span className="text-[7px] md:text-[8px] text-zinc-500 uppercase font-black tracking-tighter truncate">Entry</span>
-                                <span className="text-[10px] md:text-xs font-bold text-white tabular-nums truncate">{signal.entry}</span>
+                                <span className="text-[10px] md:text-sm font-bold text-white tabular-nums truncate">{signal.entry}</span>
                             </div>
-                            <div className="flex flex-col min-w-0 hidden xs:flex">
+                            <div className="flex flex-col min-w-0">
                                 <span className="text-[7px] md:text-[8px] text-rose-500/80 uppercase font-black tracking-tighter flex items-center gap-0.5 md:gap-1">
-                                    <ShieldAlert className="size-1.5 md:size-2" /> SL
+                                    <ShieldAlert className="size-1.5 md:size-2.5" /> Stop Loss
                                 </span>
-                                <span className="text-[10px] md:text-xs font-bold text-rose-500 tabular-nums truncate">{signal.sl}</span>
+                                <span className="text-[10px] md:text-sm font-bold text-rose-500 tabular-nums truncate">{signal.sl}</span>
                             </div>
-                            <div className="flex flex-col min-w-0 hidden xs:flex">
+                            <div className="flex flex-col min-w-0">
                                 <span className="text-[7px] md:text-[8px] text-emerald-500/80 uppercase font-black tracking-tighter flex items-center gap-0.5 md:gap-1">
-                                    <Target className="size-1.5 md:size-2" /> TP
+                                    <Target className="size-1.5 md:size-2.5" /> Take Profit
                                 </span>
-                                <span className="text-[10px] md:text-xs font-bold text-emerald-500 tabular-nums truncate">{signal.tp}</span>
+                                <span className="text-[10px] md:text-sm font-bold text-emerald-500 tabular-nums truncate">{signal.tp}</span>
                             </div>
                         </div>
 
