@@ -141,7 +141,7 @@ export default function Home() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setHubOpen(true)}
-            className="fixed bottom-6 right-6 z-50 size-16 md:size-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center shadow-2xl shadow-blue-500/40 text-white border-4 border-white/10"
+            className="fixed bottom-6 left-6 z-50 size-16 md:size-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center shadow-2xl shadow-blue-500/40 text-white border-4 border-white/10"
           >
             <div className="relative">
               <Sparkles className="size-8" />
@@ -168,7 +168,7 @@ export default function Home() {
                 "fixed z-50 bg-[#0c0c0e]/95 backdrop-blur-2xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col transition-all duration-300",
                 isMobile
                   ? "bottom-0 inset-x-0 rounded-t-3xl"
-                  : "bottom-6 right-6 w-[450px] rounded-3xl"
+                  : "bottom-6 left-6 w-[450px] rounded-3xl"
               )}
             >
               {/* Hub Header */}
