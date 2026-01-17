@@ -42,14 +42,14 @@ export function Header({ currentSymbol, onSymbolChange, signal, onAnalyze, isAna
                     </span>
                 </Link>
 
-                {/* Asset Switcher - Scrollable on mobile, expanded on desktop */}
-                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5 overflow-x-auto no-scrollbar max-w-[120px] xs:max-w-none md:flex-1 md:justify-start">
+                {/* Asset Switcher - Scrollable on mobile */}
+                <div className="hidden sm:flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
                     {ASSETS.map((item) => (
                         <button
                             key={item.symbol}
                             onClick={() => onSymbolChange(item.symbol)}
                             className={cn(
-                                "px-2.5 md:px-4 py-1.5 text-[10px] md:text-sm font-bold rounded-lg transition-all whitespace-nowrap",
+                                "px-2.5 md:px-3 py-1.5 text-[10px] md:text-xs font-bold rounded-lg transition-all whitespace-nowrap",
                                 currentSymbol === item.symbol
                                     ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30"
                                     : "text-zinc-400 hover:text-white hover:bg-white/5"
@@ -64,44 +64,44 @@ export function Header({ currentSymbol, onSymbolChange, signal, onAnalyze, isAna
             <div className="flex items-center gap-3 md:gap-4 shrink-0 flex-1 justify-end">
                 {/* Signal Display - Moved next to analyze button */}
                 {signal && (
-                    <div className="flex items-center gap-2 md:gap-4 px-2 md:px-4 py-1.5 bg-white/5 rounded-2xl border border-white/10 animate-in fade-in slide-in-from-right-4 duration-500 overflow-hidden shrink min-w-0">
-                        <div className="flex items-center gap-1 md:gap-2 border-r border-white/10 pr-2 md:pr-4 shrink-0">
+                    <div className="hidden md:flex items-center gap-4 px-4 py-1.5 bg-white/5 rounded-2xl border border-white/10 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="flex items-center gap-2 border-r border-white/10 pr-4">
                             {signal.action === 'BUY' ? (
-                                <ArrowUpCircle className="size-3 md:size-4 text-emerald-500" />
+                                <ArrowUpCircle className="size-4 text-emerald-500" />
                             ) : signal.action === 'SELL' ? (
-                                <ArrowDownCircle className="size-3 md:size-4 text-rose-500" />
+                                <ArrowDownCircle className="size-4 text-rose-500" />
                             ) : null}
                             <span className={cn(
-                                "font-black text-[10px] md:text-xs uppercase tracking-widest",
+                                "font-black text-xs uppercase tracking-widest",
                                 signal.action === 'BUY' ? "text-emerald-500" : signal.action === 'SELL' ? "text-rose-500" : "text-zinc-400"
                             )}>
                                 {signal.action}
                             </span>
                         </div>
 
-                        <div className="flex items-center gap-3 md:gap-8 overflow-hidden">
-                            <div className="flex flex-col min-w-0">
-                                <span className="text-[7px] md:text-[8px] text-zinc-500 uppercase font-black tracking-tighter truncate">Entry</span>
-                                <span className="text-[10px] md:text-sm font-bold text-white tabular-nums truncate">{signal.entry}</span>
+                        <div className="flex items-center gap-6">
+                            <div className="flex flex-col">
+                                <span className="text-[8px] text-zinc-500 uppercase font-black tracking-tighter">Level</span>
+                                <span className="text-xs font-bold text-white tabular-nums">{signal.entry}</span>
                             </div>
-                            <div className="flex flex-col min-w-0">
-                                <span className="text-[7px] md:text-[8px] text-rose-500/80 uppercase font-black tracking-tighter flex items-center gap-0.5 md:gap-1">
-                                    <ShieldAlert className="size-1.5 md:size-2.5" /> Stop Loss
+                            <div className="flex flex-col">
+                                <span className="text-[8px] text-rose-500/80 uppercase font-black tracking-tighter flex items-center gap-1">
+                                    <ShieldAlert className="size-2" /> Stop
                                 </span>
-                                <span className="text-[10px] md:text-sm font-bold text-rose-500 tabular-nums truncate">{signal.sl}</span>
+                                <span className="text-xs font-bold text-rose-500 tabular-nums">{signal.sl}</span>
                             </div>
-                            <div className="flex flex-col min-w-0">
-                                <span className="text-[7px] md:text-[8px] text-emerald-500/80 uppercase font-black tracking-tighter flex items-center gap-0.5 md:gap-1">
-                                    <Target className="size-1.5 md:size-2.5" /> Take Profit
+                            <div className="flex flex-col">
+                                <span className="text-[8px] text-emerald-500/80 uppercase font-black tracking-tighter flex items-center gap-1">
+                                    <Target className="size-2" /> Target
                                 </span>
-                                <span className="text-[10px] md:text-sm font-bold text-emerald-500 tabular-nums truncate">{signal.tp}</span>
+                                <span className="text-xs font-bold text-emerald-500 tabular-nums">{signal.tp}</span>
                             </div>
                         </div>
 
                         {signal.confidence && (
-                            <div className="ml-1 md:ml-2 pl-2 md:pl-4 border-l border-white/10 hidden sm:block shrink-0">
-                                <span className="text-[7px] md:text-[8px] text-blue-400/80 uppercase font-black tracking-tighter block">Conf.</span>
-                                <span className="text-[10px] md:text-xs font-bold text-blue-400 tabular-nums">{signal.confidence}</span>
+                            <div className="ml-2 pl-4 border-l border-white/10">
+                                <span className="text-[8px] text-blue-400/80 uppercase font-black tracking-tighter block">Confidence</span>
+                                <span className="text-xs font-bold text-blue-400 tabular-nums">{signal.confidence}</span>
                             </div>
                         )}
                     </div>
@@ -111,7 +111,7 @@ export function Header({ currentSymbol, onSymbolChange, signal, onAnalyze, isAna
                     onClick={onAnalyze}
                     disabled={isAnalyzing}
                     className={cn(
-                        "flex items-center gap-1 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest transition-all shrink-0",
+                        "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-widest transition-all",
                         isAnalyzing
                             ? "bg-white/5 text-zinc-500 cursor-not-allowed"
                             : hasAnalysis
@@ -122,9 +122,9 @@ export function Header({ currentSymbol, onSymbolChange, signal, onAnalyze, isAna
                     {isAnalyzing ? (
                         <div className="size-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
                     ) : (
-                        <Sparkles className="size-3 md:size-3.5" />
+                        <Sparkles className="size-3.5" />
                     )}
-                    <span>{isAnalyzing ? "..." : hasAnalysis ? "Re-Analyze" : "Analyze"}</span>
+                    <span>{isAnalyzing ? "Processing" : hasAnalysis ? "Re-Analyze" : "Analyze Chart"}</span>
                 </button>
             </div>
         </header>

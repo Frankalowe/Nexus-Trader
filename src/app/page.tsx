@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Header } from '@/components/Header';
 import { useChartCapture } from '@/hooks/use-chart-capture';
@@ -39,7 +39,6 @@ export default function Home() {
   const [currentSymbol, setCurrentSymbol] = useState('BITSTAMP:BTCUSD');
   const [isMobile, setIsMobile] = useState(false);
   const [signal, setSignal] = useState<TradeSignal | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -52,7 +51,29 @@ export default function Home() {
 
   const { captureScreen, stopStream, hasActiveStream } = useChartCapture();
 
-  const processImage = async (imageBase64: string) => {
+  const handleAnalyze = async () => {
+    // 1. Hide the hub/bubble before capture to ensure clean screenshot
+    setIsMinimized(true);
+    setHubOpen(false);
+    setState('capturing');
+    setSignal(null);
+    setError(null);
+
+    // Wait for animation to finish
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    const imageBase64 = await captureScreen();
+
+    // No longer restore hub automatically
+    // setHubOpen(true);
+    // setIsMinimized(false);
+
+    if (!imageBase64) {
+      setState('error');
+      setError('Chart capture cancelled.');
+      return;
+    }
+
     setChartImage(imageBase64);
     setState('analyzing');
 
@@ -74,46 +95,6 @@ export default function Home() {
       setError(err.message || 'An unexpected error occurred');
       setState('error');
     }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result as string;
-      processImage(base64);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleAnalyze = async () => {
-    // On mobile, use file upload fallback
-    if (isMobile) {
-      fileInputRef.current?.click();
-      return;
-    }
-
-    // 1. Hide the hub/bubble before capture to ensure clean screenshot
-    setIsMinimized(true);
-    setHubOpen(false);
-    setState('capturing');
-    setSignal(null);
-    setError(null);
-
-    // Wait for animation to finish
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    const imageBase64 = await captureScreen();
-
-    if (!imageBase64) {
-      setState('error');
-      setError('Chart capture cancelled.');
-      return;
-    }
-
-    await processImage(imageBase64);
   };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -151,14 +132,6 @@ export default function Home() {
         onAnalyze={handleAnalyze}
         isAnalyzing={state === 'analyzing' || state === 'capturing'}
         hasAnalysis={!!analysis}
-      />
-
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        accept="image/*"
-        onChange={handleFileUpload}
       />
 
       <main className="flex-1 flex overflow-hidden relative">
