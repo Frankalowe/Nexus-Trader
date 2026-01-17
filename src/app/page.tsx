@@ -90,6 +90,10 @@ export default function Home() {
       setAnalysis(data.analysis);
       setSignal(data.signal);
       setState('complete');
+
+      // Auto-open and maximize hub when analysis is ready
+      setHubOpen(true);
+      setIsMinimized(false);
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An unexpected error occurred');
