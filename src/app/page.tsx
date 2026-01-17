@@ -33,10 +33,10 @@ export default function Home() {
   const [chartImage, setChartImage] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [isHubOpen, setHubOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isHubOpen, setHubOpen] = useState(true);
+  const [isMinimized, setIsMinimized] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentSymbol, setCurrentSymbol] = useState('FX:EURUSD');
+  const [currentSymbol, setCurrentSymbol] = useState('BITSTAMP:BTCUSD');
   const [isMobile, setIsMobile] = useState(false);
   const [signal, setSignal] = useState<TradeSignal | null>(null);
 
@@ -144,23 +144,7 @@ export default function Home() {
         </div>
 
         {/* Floating Hub Toggle (Bubble) */}
-        {!isHubOpen && (
-          <motion.button
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setHubOpen(true)}
-            className="fixed bottom-6 left-6 z-50 size-16 md:size-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center shadow-2xl shadow-blue-500/40 text-white border-4 border-white/10"
-          >
-            <div className="relative">
-              <Sparkles className="size-8" />
-              {state === 'complete' && (
-                <div className="absolute -top-1 -right-1 size-4 bg-emerald-500 rounded-full border-2 border-[#0c0c0e]" />
-              )}
-            </div>
-          </motion.button>
-        )}
+
 
         {/* Floating Analysis Hub (The "Window") */}
         <AnimatePresence>
@@ -184,9 +168,6 @@ export default function Home() {
               {/* Hub Header */}
               <div className="p-4 md:p-5 border-b border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-blue-600/20 flex items-center justify-center border border-blue-500/30">
-                    <Sparkles className="size-5 text-blue-400" />
-                  </div>
                   <div>
                     <h2 className="font-bold text-white text-sm md:text-base leading-tight">Nexus Hub</h2>
                     {hasActiveStream && (

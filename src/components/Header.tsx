@@ -22,10 +22,10 @@ interface HeaderProps {
 }
 
 const ASSETS = [
+    { name: 'BTCUSD', symbol: 'BITSTAMP:BTCUSD' },
     { name: 'EURUSD', symbol: 'FX:EURUSD' },
     { name: 'GBPUSD', symbol: 'FX:GBPUSD' },
     { name: 'USDJPY', symbol: 'FX:USDJPY' },
-    { name: 'BTCUSD', symbol: 'BITSTAMP:BTCUSD' },
     { name: 'ETHUSD', symbol: 'BITSTAMP:ETHUSD' },
 ];
 
