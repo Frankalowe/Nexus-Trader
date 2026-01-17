@@ -26,7 +26,7 @@ export function Header({ currentSymbol, onSymbolChange }: HeaderProps) {
                         <BarChart3 className="text-white size-5" />
                     </div>
                     <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent hidden sm:block">
-                        TradeGuru
+                        Nexus Trading
                     </span>
                 </Link>
 

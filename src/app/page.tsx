@@ -126,7 +126,7 @@ export default function Home() {
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 px-6 text-center">
               <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-white/5 p-6 max-w-sm">
                 <BarChart2 className="size-10 md:size-12 text-blue-500 mx-auto mb-4 opacity-50" />
-                <h3 className="text-white font-medium mb-1">Signal Intelligence Terminal</h3>
+                <h3 className="text-white font-medium mb-1">Nexus Intelligence Terminal</h3>
                 <p className="text-slate-400 text-xs md:text-sm">Click the <b>Analyze</b> bubble to generate high-alpha trade signals from this chart.</p>
               </div>
             </div>
@@ -178,7 +178,7 @@ export default function Home() {
                     <Sparkles className="size-5 text-blue-400" />
                   </div>
                   <div>
-                    <h2 className="font-bold text-white text-sm md:text-base leading-tight">Signal Hub</h2>
+                    <h2 className="font-bold text-white text-sm md:text-base leading-tight">Nexus Hub</h2>
                     {hasActiveStream && (
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <div className="size-1 bg-emerald-500 rounded-full animate-pulse" />
