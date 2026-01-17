@@ -61,52 +61,52 @@ export function Header({ currentSymbol, onSymbolChange, signal, onAnalyze, isAna
                 </div>
             </div>
 
-            {/* Signal Display - Center */}
-            {signal && (
-                <div className="absolute left-1/2 -translate-x-1/2 hidden xl:flex items-center gap-4 px-4 py-1.5 bg-white/5 rounded-2xl border border-white/10 animate-in fade-in slide-in-from-top-4 duration-500">
-                    <div className="flex items-center gap-2 border-r border-white/10 pr-4">
-                        {signal.action === 'BUY' ? (
-                            <ArrowUpCircle className="size-4 text-emerald-500" />
-                        ) : signal.action === 'SELL' ? (
-                            <ArrowDownCircle className="size-4 text-rose-500" />
-                        ) : null}
-                        <span className={cn(
-                            "font-black text-xs uppercase tracking-widest",
-                            signal.action === 'BUY' ? "text-emerald-500" : signal.action === 'SELL' ? "text-rose-500" : "text-zinc-400"
-                        )}>
-                            {signal.action}
-                        </span>
-                    </div>
-
-                    <div className="flex items-center gap-6">
-                        <div className="flex flex-col">
-                            <span className="text-[8px] text-zinc-500 uppercase font-black tracking-tighter">Level</span>
-                            <span className="text-xs font-bold text-white tabular-nums">{signal.entry}</span>
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-[8px] text-rose-500/80 uppercase font-black tracking-tighter flex items-center gap-1">
-                                <ShieldAlert className="size-2" /> Stop
-                            </span>
-                            <span className="text-xs font-bold text-rose-500 tabular-nums">{signal.sl}</span>
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-[8px] text-emerald-500/80 uppercase font-black tracking-tighter flex items-center gap-1">
-                                <Target className="size-2" /> Target
-                            </span>
-                            <span className="text-xs font-bold text-emerald-500 tabular-nums">{signal.tp}</span>
-                        </div>
-                    </div>
-
-                    {signal.confidence && (
-                        <div className="ml-2 pl-4 border-l border-white/10">
-                            <span className="text-[8px] text-blue-400/80 uppercase font-black tracking-tighter block">Confidence</span>
-                            <span className="text-xs font-bold text-blue-400 tabular-nums">{signal.confidence}</span>
-                        </div>
-                    )}
-                </div>
-            )}
-
             <div className="flex items-center gap-3 md:gap-4 shrink-0 flex-1 justify-end">
+                {/* Signal Display - Moved next to analyze button */}
+                {signal && (
+                    <div className="hidden md:flex items-center gap-4 px-4 py-1.5 bg-white/5 rounded-2xl border border-white/10 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="flex items-center gap-2 border-r border-white/10 pr-4">
+                            {signal.action === 'BUY' ? (
+                                <ArrowUpCircle className="size-4 text-emerald-500" />
+                            ) : signal.action === 'SELL' ? (
+                                <ArrowDownCircle className="size-4 text-rose-500" />
+                            ) : null}
+                            <span className={cn(
+                                "font-black text-xs uppercase tracking-widest",
+                                signal.action === 'BUY' ? "text-emerald-500" : signal.action === 'SELL' ? "text-rose-500" : "text-zinc-400"
+                            )}>
+                                {signal.action}
+                            </span>
+                        </div>
+
+                        <div className="flex items-center gap-6">
+                            <div className="flex flex-col">
+                                <span className="text-[8px] text-zinc-500 uppercase font-black tracking-tighter">Level</span>
+                                <span className="text-xs font-bold text-white tabular-nums">{signal.entry}</span>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[8px] text-rose-500/80 uppercase font-black tracking-tighter flex items-center gap-1">
+                                    <ShieldAlert className="size-2" /> Stop
+                                </span>
+                                <span className="text-xs font-bold text-rose-500 tabular-nums">{signal.sl}</span>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[8px] text-emerald-500/80 uppercase font-black tracking-tighter flex items-center gap-1">
+                                    <Target className="size-2" /> Target
+                                </span>
+                                <span className="text-xs font-bold text-emerald-500 tabular-nums">{signal.tp}</span>
+                            </div>
+                        </div>
+
+                        {signal.confidence && (
+                            <div className="ml-2 pl-4 border-l border-white/10">
+                                <span className="text-[8px] text-blue-400/80 uppercase font-black tracking-tighter block">Confidence</span>
+                                <span className="text-xs font-bold text-blue-400 tabular-nums">{signal.confidence}</span>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <button
                     onClick={onAnalyze}
                     disabled={isAnalyzing}
@@ -125,13 +125,6 @@ export function Header({ currentSymbol, onSymbolChange, signal, onAnalyze, isAna
                         <Sparkles className="size-3.5" />
                     )}
                     <span>{isAnalyzing ? "Processing" : hasAnalysis ? "Re-Analyze" : "Analyze Chart"}</span>
-                </button>
-
-                <div className="h-8 w-px bg-white/10 hidden sm:block" />
-
-                <button className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors p-2 md:p-0">
-                    <User className="size-4 md:size-5" />
-                    <span className="hidden md:inline">Profile</span>
                 </button>
             </div>
         </header>
