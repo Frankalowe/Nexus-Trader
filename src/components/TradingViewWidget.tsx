@@ -23,8 +23,8 @@ function TradingViewWidget({ symbol = "FX:EURUSD" }: Props) {
         script.innerHTML = JSON.stringify({
             "autosize": true,
             "symbol": symbol,
-            "interval": "D",
-            "timezone": "Etc/UTC",
+            "interval": "1",
+            "timezone": "Asia/Kolkata",
             "theme": "dark",
             "style": "1",
             "locale": "en",

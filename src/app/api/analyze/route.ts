@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { openai } from '@/lib/ai';
-import { enforceRiskRewardRatio, validateMinimalRisk, TradeSignal, RiskMetrics } from '@/lib/utils';
 
 export async function POST(req: Request) {
     try {
@@ -20,44 +19,50 @@ export async function POST(req: Request) {
             messages: [
                 {
                     role: "system",
-                    content: `You are a Pro Alpha Deep-Vision Signal Generator with strict risk management.
+                    content: `You are a Pro Alpha Deep-Vision Signal Generator.
 YOU ARE CURRENTLY LOOKING AT A LIVE CHART IMAGE provided by a professional trader. 
 Your goal is to provide PRACTICAL, EXECUTABLE signals based on high-level technical analysis (Price Action, Liquidity, SMC/ICT concepts, and Indicator Confluence).
 
-STRICT RISK MANAGEMENT RULES:
-1. **Executable Entry**: Suggested entry must be reachable from the current price (Retracement or Breakout). No fantasy prices.
-2. **MANDATORY 1:2 Risk/Reward Ratio**: Every signal MUST have a 1:2 minimum RR ratio. Take Profit MUST be exactly 2x the risk distance from entry.
-   - For BUY: Risk = Entry - SL, TP = Entry + (Risk × 2)
-   - For SELL: Risk = SL - Entry, TP = Entry - (Risk × 2)
-3. **Minimal Risk**: Always place Stop Loss behind logical structures (Swing High/Low, Order Block) to minimize risk amount.
-4. **Liquidity Awareness**: Identify if the signal is a "sweep" or targeting a "draw on liquidity" (Equal Highs/Lows).
-5. **Data Over Vague Text**: NEVER use placeholders like "[Price Level]". Provide EXACT NUMBERS from the chart's Y-axis scale.
+PRACTICALITY RULES:
+1. **1-Minute (M1) Scalping Focus**: Analyze the chart specifically for ultra-short-term scalping opportunities. Identify M1 market structure shifts and micro-liquidity sweeps.
+2. **5-Minute Entry Window**: Suggested entry must be executable within the NEXT 5 MINUTES from the current timestamp.
+3. **30-Minute Exit/Expiry**: The setup should hit its target or reach a conclusion within roughly 30 MINUTES of entry.
+4. **Timezone**: Use UTC+5:30 (India Standard Time) for all timestamps.
+5. **Executable Entry**: Suggested entry must be reachable from the current price (Retracement or Breakout). No fantasy prices.
+6. **Realistic Risk/Reward**: Aim for logical scalping RR (e.g. 1:1.5 to 1:2). Place SL tightly behind micro-structure.
+7. **Data Over Vague Text**: NEVER use placeholders like "[Price Level]". Provide EXACT NUMBERS from the chart's Y-axis scale.
 
 RESPONSE FORMAT:
 You MUST return a JSON object with the following structure:
 {
-  "analysis": "A detailed markdown analysis following the structure below...",
+  "analysis": "A detailed markdown analysis focusing on the M1 scalp opportunity...",
   "signal": {
     "action": "BUY" | "SELL" | "NEUTRAL",
     "confidence": "XX%",
     "entry": "EXACT NUMBER",
     "sl": "EXACT NUMBER",
-    "tp": "EXACT NUMBER"
+    "tp": "EXACT NUMBER",
+    "entryTime": "IST Entry Window (e.g. 10:45 AM - 10:50 AM)",
+    "exitTime": "IST Target Window (e.g. By 11:20 AM)"
   }
 }
 
 The "analysis" field should include these sections:
-1. **Market DNA**: Asset identity and current institutional bias.
-2. **Signal Context**: Confluence checklist.
-3. **🎯 EXECUTABLE SIGNAL**: Summary of the signal.
-4. **🧠 Pattern Anatomy**: Breakdown of patterns.
-5. **📜 Management Rulebook**: Management instructions.
-6. **Risk Note**: Volatility warnings.`
+1. **Market DNA**: Current M1 momentum and bias.
+2. **Scalp Context**: Micro-confluence checklist.
+3. **🎯 SCALP SIGNAL**: Summary of the fast-execution signal.
+4. **🧠 Micro-Anatomy**: Breakdown of the M1 setup.
+5. **📜 Execution Rules**: Fast management rules.`
                 },
                 {
                     role: "user",
                     content: [
-                        { type: "text", text: "Look closely at the attached screenshot. Find the current price on the right-hand Y-axis and analyze the candlestick patterns to generate a trade signal. Provide numbers, not text placeholders. Ensure the signal has exactly a 1:2 risk/reward ratio." },
+                        {
+                            type: "text",
+                            text: `CURRENT TIMESTAMP (IST): 2026-01-18 05:00 AM. 
+                            Look closely at the attached 1-minute chart. Find the current price on the right-hand Y-axis and analyze the candlestick patterns to generate an ultra-fast scalp signal. 
+                            Ensure the entry is within 5 minutes and exit is within 30 minutes of now. Use numbers, not text placeholders.`
+                        },
                         { type: "image_url", image_url: { url: image, detail: "high" } }
                     ],
                 },
@@ -66,32 +71,7 @@ The "analysis" field should include these sections:
             response_format: { type: "json_object" }
         });
 
-        let result = JSON.parse(response.choices[0].message.content || '{}');
-        
-        // Enforce 1:2 risk/reward ratio with minimal risk
-        if (result.signal && typeof result.signal === 'object') {
-            const signal: TradeSignal = result.signal;
-            
-            // Validate input values
-            if (typeof signal.entry === 'string') signal.entry = parseFloat(signal.entry);
-            if (typeof signal.sl === 'string') signal.sl = parseFloat(signal.sl);
-            if (typeof signal.tp === 'string') signal.tp = parseFloat(signal.tp);
-            
-            // Enforce 1:2 ratio
-            const enforcedSignal = enforceRiskRewardRatio(signal, 2);
-            
-            // Get risk metrics
-            const metrics = validateMinimalRisk(enforcedSignal);
-            
-            result.signal = enforcedSignal;
-            result.riskMetrics = metrics;
-            
-            // Add warning if minimal risk threshold exceeded
-            if (metrics.riskPercentage > 2) {
-                result.warning = `Risk is ${metrics.riskPercentage}% of entry price. Consider reducing position size (recommended max: 2%).`;
-            }
-        }
-        
+        const result = JSON.parse(response.choices[0].message.content || '{}');
         return NextResponse.json(result);
     } catch (error: any) {
         console.error('Analysis error:', error.message || error);

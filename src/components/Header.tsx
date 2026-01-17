@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BarChart3, User, Menu, ArrowUpCircle, ArrowDownCircle, Target, ShieldAlert, Sparkles } from 'lucide-react';
+import { BarChart3, User, Menu, ArrowUpCircle, ArrowDownCircle, Target, ShieldAlert, Sparkles, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TradeSignal {
@@ -10,6 +10,8 @@ interface TradeSignal {
     sl: string;
     tp: string;
     confidence?: string;
+    entryTime?: string;
+    exitTime?: string;
 }
 
 interface HeaderProps {
@@ -97,6 +99,27 @@ export function Header({ currentSymbol, onSymbolChange, signal, onAnalyze, isAna
                                 <span className="text-xs font-bold text-emerald-500 tabular-nums">{signal.tp}</span>
                             </div>
                         </div>
+
+                        {(signal.entryTime || signal.exitTime) && (
+                            <div className="flex items-center gap-4 pl-4 border-l border-white/10">
+                                {signal.entryTime && (
+                                    <div className="flex flex-col text-right">
+                                        <span className="text-[8px] text-zinc-500 uppercase font-black tracking-tighter flex items-center justify-end gap-1">
+                                            <Clock className="size-2" /> Entry
+                                        </span>
+                                        <span className="text-[10px] font-bold text-white whitespace-nowrap">{signal.entryTime}</span>
+                                    </div>
+                                )}
+                                {signal.exitTime && (
+                                    <div className="flex flex-col text-right">
+                                        <span className="text-[8px] text-zinc-500 uppercase font-black tracking-tighter flex items-center justify-end gap-1">
+                                            <Clock className="size-2" /> Exit
+                                        </span>
+                                        <span className="text-[10px] font-bold text-white whitespace-nowrap">{signal.exitTime}</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {signal.confidence && (
                             <div className="ml-2 pl-4 border-l border-white/10">

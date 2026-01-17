@@ -25,6 +25,8 @@ interface TradeSignal {
   sl: string;
   tp: string;
   confidence?: string;
+  entryTime?: string;
+  exitTime?: string;
 }
 
 export default function Home() {
