@@ -29,18 +29,26 @@ PRACTICALITY RULES:
 3. **Liquidity Awareness**: Identify if the signal is a "sweep" or targeting a "draw on liquidity" (Equal Highs/Lows).
 4. **Data Over Vague Text**: NEVER use placeholders like "[Price Level]". Provide EXACT NUMBERS from the chart's Y-axis scale.
 
-Structure your response with these exact sections:
-1. **Market DNA**: Asset identity and current institutional bias (Bullish/Bearish).
-2. **Signal Context**: Confluence checklist (e.g., FVG fill, Trendline bounce, RSI 50-rejection).
-3. **🎯 EXECUTABLE SIGNAL**: 
-   - **Action**: [BUY / SELL / NEUTRAL]
-   - **Confidence Score**: [XX%]
-   - **Direct Entry**: [EXACT NUMBER]
-   - **Hard Stop Loss**: [EXACT NUMBER]
-   - **Primary Take Profit**: [EXACT NUMBER]
-4. **🧠 Pattern Anatomy**: Break down the specific candlelight and volume patterns that confirm this entry.
-5. **📜 Management Rulebook**: When to move SL to BE? When to take partials?
-6. **Risk Note**: Immediate volatility warnings (News, Session Close/Open).`
+RESPONSE FORMAT:
+You MUST return a JSON object with the following structure:
+{
+  "analysis": "A detailed markdown analysis following the structure below...",
+  "signal": {
+    "action": "BUY" | "SELL" | "NEUTRAL",
+    "confidence": "XX%",
+    "entry": "EXACT NUMBER",
+    "sl": "EXACT NUMBER",
+    "tp": "EXACT NUMBER"
+  }
+}
+
+The "analysis" field should include these sections:
+1. **Market DNA**: Asset identity and current institutional bias.
+2. **Signal Context**: Confluence checklist.
+3. **🎯 EXECUTABLE SIGNAL**: Summary of the signal.
+4. **🧠 Pattern Anatomy**: Breakdown of patterns.
+5. **📜 Management Rulebook**: Management instructions.
+6. **Risk Note**: Volatility warnings.`
                 },
                 {
                     role: "user",
@@ -51,9 +59,11 @@ Structure your response with these exact sections:
                 },
             ],
             max_tokens: 1000,
+            response_format: { type: "json_object" }
         });
 
-        return NextResponse.json({ analysis: response.choices[0].message.content });
+        const result = JSON.parse(response.choices[0].message.content || '{}');
+        return NextResponse.json(result);
     } catch (error: any) {
         console.error('Analysis error:', error.message || error);
         return NextResponse.json({

@@ -19,6 +19,14 @@ interface Message {
   content: string;
 }
 
+interface TradeSignal {
+  action: 'BUY' | 'SELL' | 'NEUTRAL';
+  entry: string;
+  sl: string;
+  tp: string;
+  confidence?: string;
+}
+
 export default function Home() {
   const [state, setState] = useState<AnalysisState>('idle');
   const [analysis, setAnalysis] = useState<string | null>(null);
@@ -30,6 +38,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [currentSymbol, setCurrentSymbol] = useState('FX:EURUSD');
   const [isMobile, setIsMobile] = useState(false);
+  const [signal, setSignal] = useState<TradeSignal | null>(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -47,6 +56,7 @@ export default function Home() {
     setIsMinimized(true);
     setHubOpen(false);
     setState('capturing');
+    setSignal(null);
     setError(null);
 
     // Wait for animation to finish
@@ -54,9 +64,9 @@ export default function Home() {
 
     const imageBase64 = await captureScreen();
 
-    // 2. Restore hub and show loading state
-    setHubOpen(true);
-    setIsMinimized(false);
+    // No longer restore hub automatically
+    // setHubOpen(true);
+    // setIsMinimized(false);
 
     if (!imageBase64) {
       setState('error');
@@ -78,6 +88,7 @@ export default function Home() {
       if (!response.ok) throw new Error(data.error || 'Analysis failed');
 
       setAnalysis(data.analysis);
+      setSignal(data.signal);
       setState('complete');
     } catch (err: any) {
       console.error(err);
@@ -114,7 +125,14 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden font-sans relative">
-      <Header currentSymbol={currentSymbol} onSymbolChange={setCurrentSymbol} />
+      <Header
+        currentSymbol={currentSymbol}
+        onSymbolChange={setCurrentSymbol}
+        signal={signal}
+        onAnalyze={handleAnalyze}
+        isAnalyzing={state === 'analyzing' || state === 'capturing'}
+        hasAnalysis={!!analysis}
+      />
 
       <main className="flex-1 flex overflow-hidden relative">
         {/* Main Chart Area */}
@@ -122,15 +140,7 @@ export default function Home() {
           <TradingViewWidget symbol={currentSymbol} />
 
           {/* User Instruction if idle and hub closed */}
-          {state === 'idle' && !isHubOpen && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 px-6 text-center">
-              <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl border border-white/5 p-6 max-w-sm">
-                <BarChart2 className="size-10 md:size-12 text-blue-500 mx-auto mb-4 opacity-50" />
-                <h3 className="text-white font-medium mb-1">Nexus Intelligence Terminal</h3>
-                <p className="text-slate-400 text-xs md:text-sm">Click the <b>Analyze</b> bubble to generate high-alpha trade signals from this chart.</p>
-              </div>
-            </div>
-          )}
+
         </div>
 
         {/* Floating Hub Toggle (Bubble) */}

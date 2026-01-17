@@ -1,12 +1,24 @@
 'use client';
 
 import Link from 'next/link';
-import { BarChart3, User, Menu } from 'lucide-react';
+import { BarChart3, User, Menu, ArrowUpCircle, ArrowDownCircle, Target, ShieldAlert, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+interface TradeSignal {
+    action: 'BUY' | 'SELL' | 'NEUTRAL';
+    entry: string;
+    sl: string;
+    tp: string;
+    confidence?: string;
+}
 
 interface HeaderProps {
     currentSymbol: string;
     onSymbolChange: (symbol: string) => void;
+    signal?: TradeSignal | null;
+    onAnalyze: () => void;
+    isAnalyzing: boolean;
+    hasAnalysis: boolean;
 }
 
 const ASSETS = [
@@ -17,21 +29,21 @@ const ASSETS = [
     { name: 'ETHUSD', symbol: 'BITSTAMP:ETHUSD' },
 ];
 
-export function Header({ currentSymbol, onSymbolChange }: HeaderProps) {
+export function Header({ currentSymbol, onSymbolChange, signal, onAnalyze, isAnalyzing, hasAnalysis }: HeaderProps) {
     return (
         <header className="h-16 border-b border-white/5 bg-background/80 backdrop-blur-md sticky top-0 z-50 flex items-center justify-between px-4 md:px-6">
-            <div className="flex items-center gap-4 md:gap-8 overflow-hidden">
+            <div className="flex items-center gap-4 md:gap-8 overflow-hidden flex-1">
                 <Link href="/" className="flex items-center gap-2 group shrink-0">
                     <div className="size-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/40 transition-all">
                         <BarChart3 className="text-white size-5" />
                     </div>
-                    <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent hidden sm:block">
+                    <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent hidden lg:block">
                         Nexus Trading
                     </span>
                 </Link>
 
                 {/* Asset Switcher - Scrollable on mobile */}
-                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5 overflow-x-auto no-scrollbar max-w-[200px] xs:max-w-[300px] sm:max-w-none">
+                <div className="hidden sm:flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
                     {ASSETS.map((item) => (
                         <button
                             key={item.symbol}
@@ -49,7 +61,74 @@ export function Header({ currentSymbol, onSymbolChange }: HeaderProps) {
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 md:gap-4 shrink-0">
+            {/* Signal Display - Center */}
+            {signal && (
+                <div className="absolute left-1/2 -translate-x-1/2 hidden xl:flex items-center gap-4 px-4 py-1.5 bg-white/5 rounded-2xl border border-white/10 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="flex items-center gap-2 border-r border-white/10 pr-4">
+                        {signal.action === 'BUY' ? (
+                            <ArrowUpCircle className="size-4 text-emerald-500" />
+                        ) : signal.action === 'SELL' ? (
+                            <ArrowDownCircle className="size-4 text-rose-500" />
+                        ) : null}
+                        <span className={cn(
+                            "font-black text-xs uppercase tracking-widest",
+                            signal.action === 'BUY' ? "text-emerald-500" : signal.action === 'SELL' ? "text-rose-500" : "text-zinc-400"
+                        )}>
+                            {signal.action}
+                        </span>
+                    </div>
+
+                    <div className="flex items-center gap-6">
+                        <div className="flex flex-col">
+                            <span className="text-[8px] text-zinc-500 uppercase font-black tracking-tighter">Level</span>
+                            <span className="text-xs font-bold text-white tabular-nums">{signal.entry}</span>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[8px] text-rose-500/80 uppercase font-black tracking-tighter flex items-center gap-1">
+                                <ShieldAlert className="size-2" /> Stop
+                            </span>
+                            <span className="text-xs font-bold text-rose-500 tabular-nums">{signal.sl}</span>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[8px] text-emerald-500/80 uppercase font-black tracking-tighter flex items-center gap-1">
+                                <Target className="size-2" /> Target
+                            </span>
+                            <span className="text-xs font-bold text-emerald-500 tabular-nums">{signal.tp}</span>
+                        </div>
+                    </div>
+
+                    {signal.confidence && (
+                        <div className="ml-2 pl-4 border-l border-white/10">
+                            <span className="text-[8px] text-blue-400/80 uppercase font-black tracking-tighter block">Confidence</span>
+                            <span className="text-xs font-bold text-blue-400 tabular-nums">{signal.confidence}</span>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            <div className="flex items-center gap-3 md:gap-4 shrink-0 flex-1 justify-end">
+                <button
+                    onClick={onAnalyze}
+                    disabled={isAnalyzing}
+                    className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-widest transition-all",
+                        isAnalyzing
+                            ? "bg-white/5 text-zinc-500 cursor-not-allowed"
+                            : hasAnalysis
+                                ? "bg-white/5 text-blue-400 border border-blue-500/20 hover:bg-blue-500/10"
+                                : "bg-blue-600 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:scale-[1.02]"
+                    )}
+                >
+                    {isAnalyzing ? (
+                        <div className="size-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                        <Sparkles className="size-3.5" />
+                    )}
+                    <span>{isAnalyzing ? "Processing" : hasAnalysis ? "Re-Analyze" : "Analyze Chart"}</span>
+                </button>
+
+                <div className="h-8 w-px bg-white/10 hidden sm:block" />
+
                 <button className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors p-2 md:p-0">
                     <User className="size-4 md:size-5" />
                     <span className="hidden md:inline">Profile</span>
