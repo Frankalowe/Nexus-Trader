@@ -99,7 +99,7 @@ function validateSignal(result: Signal, equity: number, riskPercentage: number):
             entry,
             sl,
             tp,
-            positionSize: `${positionSize} Units (Risk: $${riskAmount.toFixed(2)}, Reward: $${(positionSize * rewardDistance).toFixed(2)})`,
+            positionSize: `${positionSize} Units (Risk: $${riskAmount.toFixed(2)}, Reward: $${(Number(positionSize) * rewardDistance).toFixed(2)})`,
             riskRewardRatio: `${riskRewardRatio.toFixed(2)}:1`,
             status: 'VALIDATED ✓'
         }
