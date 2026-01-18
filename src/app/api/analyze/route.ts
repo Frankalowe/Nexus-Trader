@@ -1,6 +1,111 @@
 import { NextResponse } from 'next/server';
 import { openai } from '@/lib/ai';
 
+interface Signal {
+    analysis?: string;
+    signal?: {
+        action: string;
+        confidence: string;
+        entry: number | string;
+        sl: number | string;
+        tp: number | string;
+        positionSize?: string;
+        entryTime?: string;
+        exitTime?: string;
+    };
+    error?: string;
+}
+
+function validateSignal(result: Signal, equity: number, riskPercentage: number): Signal {
+    if (!result.signal || result.error) {
+        return result;
+    }
+
+    const signal = result.signal;
+    const entry = parseFloat(String(signal.entry));
+    const sl = parseFloat(String(signal.sl));
+    const tp = parseFloat(String(signal.tp));
+
+    // Check if values are valid numbers
+    if (isNaN(entry) || isNaN(sl) || isNaN(tp)) {
+        return {
+            ...result,
+            error: 'Invalid price levels. Entry, SL, and TP must be numeric values.',
+            signal: {
+                ...signal,
+                entry,
+                sl,
+                tp
+            }
+        };
+    }
+
+    // Determine trade direction
+    const isBuy = signal.action === 'BUY';
+    
+    // Validate SL is on the correct side
+    if (isBuy && sl >= entry) {
+        return {
+            ...result,
+            error: `For BUY signals, Stop Loss ($${sl}) must be BELOW Entry ($${entry}).`,
+            signal
+        };
+    }
+    if (!isBuy && sl <= entry) {
+        return {
+            ...result,
+            error: `For SELL signals, Stop Loss ($${sl}) must be ABOVE Entry ($${entry}).`,
+            signal
+        };
+    }
+
+    // Calculate risk in pips/points
+    const riskDistance = Math.abs(entry - sl);
+    const rewardDistance = Math.abs(tp - entry);
+    const riskRewardRatio = rewardDistance / riskDistance;
+
+    // Validate minimum 1:2 RR
+    if (riskRewardRatio < 1.95) {
+        return {
+            ...result,
+            error: `Risk/Reward ratio is ${riskRewardRatio.toFixed(2)}:1. MINIMUM required is 2:1. TP needs adjustment.`,
+            signal: {
+                ...signal,
+                entry,
+                sl,
+                tp
+            }
+        };
+    }
+
+    // Validate minimum risk is reasonable (at least 10 pips or 0.0010 for forex)
+    const minRisk = 0.001;
+    if (riskDistance < minRisk) {
+        return {
+            ...result,
+            error: `Risk distance is too small (${riskDistance.toFixed(4)}). Minimum acceptable risk is ${minRisk}. SL placement needs adjustment.`,
+            signal
+        };
+    }
+
+    // Calculate position size based on equity and risk
+    const riskAmount = equity * (riskPercentage / 100);
+    const positionSize = (riskAmount / riskDistance).toFixed(2);
+
+    return {
+        ...result,
+        signal: {
+            ...signal,
+            entry,
+            sl,
+            tp,
+            positionSize: `${positionSize} Units (Risk: $${riskAmount.toFixed(2)}, Reward: $${(positionSize * rewardDistance).toFixed(2)})`,
+            riskRewardRatio: `${riskRewardRatio.toFixed(2)}:1`,
+            status: 'VALIDATED ✓'
+        }
+    };
+}
+
 export async function POST(req: Request) {
     try {
         const body = await req.json();
@@ -92,7 +197,11 @@ The "analysis" field should include these sections:
         });
 
         const result = JSON.parse(response.choices[0].message.content || '{}');
-        return NextResponse.json(result);
+        
+        // Validate Risk/Reward Ratio and SL/TP calculations
+        const validated = validateSignal(result, equity, riskPercentage);
+        
+        return NextResponse.json(validated);
     } catch (error: any) {
         console.error('Analysis error:', error.message || error);
         return NextResponse.json({
