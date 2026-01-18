@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Header } from '@/components/Header';
 import { useChartCapture } from '@/hooks/use-chart-capture';
-import { Camera, MessageSquare, Send, Sparkles, X, ChevronRight, Loader2, RefreshCw, BarChart2, PanelRightOpen, PanelRightClose, Maximize2, Minimize2 } from 'lucide-react';
+import { Camera, MessageSquare, Send, Sparkles, X, ChevronRight, Loader2, RefreshCw, BarChart2, PanelRightOpen, PanelRightClose, Maximize2, Minimize2, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Dynamic import for TradingView to avoid SSR issues
 const TradingViewWidget = dynamic(() => import('@/components/TradingViewWidget'), { ssr: false });
 
-type AnalysisState = 'idle' | 'capturing' | 'analyzing' | 'complete' | 'error';
+type AnalysisState = 'idle' | 'capturing_h4' | 'capturing_h1' | 'capturing_m15' | 'analyzing' | 'complete' | 'error';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -32,10 +32,16 @@ interface TradeSignal {
   status?: string;
 }
 
+interface MultiImages {
+  h4: string | null;
+  h1: string | null;
+  m15: string | null;
+}
+
 export default function Home() {
   const [state, setState] = useState<AnalysisState>('idle');
   const [analysis, setAnalysis] = useState<string | null>(null);
-  const [chartImage, setChartImage] = useState<string | null>(null);
+  const [images, setImages] = useState<MultiImages>({ h4: null, h1: null, m15: null });
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isHubOpen, setHubOpen] = useState(false);
@@ -57,40 +63,62 @@ export default function Home() {
 
   const { captureScreen, stopStream, hasActiveStream } = useChartCapture();
 
-  const handleAnalyze = async () => {
-    // 1. Hide the hub/bubble before capture to ensure clean screenshot
-    setIsMinimized(true);
-    setHubOpen(false);
-    setState('capturing');
+  const resetAnalysis = () => {
+    setState('idle');
+    setImages({ h4: null, h1: null, m15: null });
+    setAnalysis(null);
     setSignal(null);
     setError(null);
+    setMessages([]);
+  };
 
-    // Wait for animation to finish
+  const startMultiCapture = () => {
+    resetAnalysis();
+    setState('capturing_h4');
+    setHubOpen(true);
+    setIsMinimized(false);
+  };
+
+  const captureCurrentStep = async () => {
+    const currentStep = state;
+    if (!currentStep.startsWith('capturing_')) return;
+
+    // Temporarily hide hub for clean shot
+    setIsMinimized(true);
     await new Promise(resolve => setTimeout(resolve, 300));
 
     const imageBase64 = await captureScreen();
-
-    // No longer restore hub automatically
-    // setHubOpen(true);
-    // setIsMinimized(false);
+    setIsMinimized(false);
 
     if (!imageBase64) {
-      setState('error');
-      setError('Chart capture cancelled.');
+      setError('Capture failed or cancelled');
       return;
     }
 
-    setChartImage(imageBase64);
-    setState('analyzing');
+    if (currentStep === 'capturing_h4') {
+      setImages(prev => ({ ...prev, h4: imageBase64 }));
+      setState('capturing_h1');
+    } else if (currentStep === 'capturing_h1') {
+      setImages(prev => ({ ...prev, h1: imageBase64 }));
+      setState('capturing_m15');
+    } else if (currentStep === 'capturing_m15') {
+      const finalImages = { ...images, m15: imageBase64 };
+      setImages(finalImages);
+      runTopDownAnalysis(finalImages);
+    }
+  };
 
+  const runTopDownAnalysis = async (finalImages: MultiImages) => {
+    setState('analyzing');
     try {
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          image: imageBase64,
+          images: finalImages,
           equity: parseFloat(equity) || 10000,
-          riskPercentage: 0.5
+          riskPercentage: 0.5,
+          symbol: currentSymbol
         }),
       });
 
@@ -109,7 +137,7 @@ export default function Home() {
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!input.trim() || !chartImage) return;
+    if (!input.trim() || !images.m15) return;
 
     const newMsg: Message = { role: 'user', content: input };
     setMessages(prev => [...prev, newMsg]);
@@ -122,7 +150,7 @@ export default function Home() {
         body: JSON.stringify({
           messages: [...messages, newMsg],
           context: analysis,
-          image: chartImage
+          image: images.m15 // Use 15m chart as primary chat context
         }),
       });
 
@@ -139,8 +167,8 @@ export default function Home() {
         currentSymbol={currentSymbol}
         onSymbolChange={setCurrentSymbol}
         signal={signal}
-        onAnalyze={handleAnalyze}
-        isAnalyzing={state === 'analyzing' || state === 'capturing'}
+        onAnalyze={startMultiCapture}
+        isAnalyzing={state === 'analyzing' || state.startsWith('capturing_')}
         hasAnalysis={!!analysis}
         equity={equity}
         onEquityChange={setEquity}
@@ -150,12 +178,9 @@ export default function Home() {
         {/* Main Chart Area */}
         <div className="flex-1 relative bg-slate-950">
           <TradingViewWidget symbol={currentSymbol} />
-
-          {/* User Instruction if idle and hub closed */}
-
         </div>
 
-        {/* Floating Hub Toggle (Bubble) */}
+        {/* Floating Hub Toggle */}
         {!isHubOpen && (
           <motion.button
             initial={{ scale: 0, opacity: 0 }}
@@ -174,8 +199,7 @@ export default function Home() {
           </motion.button>
         )}
 
-
-        {/* Floating Analysis Hub (The "Window") */}
+        {/* Floating Analysis Hub */}
         <AnimatePresence>
           {isHubOpen && (
             <motion.div
@@ -189,79 +213,70 @@ export default function Home() {
               exit={{ opacity: 0, y: 50, scale: 0.9 }}
               className={cn(
                 "fixed z-50 bg-[#0c0c0e]/95 backdrop-blur-2xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col transition-all duration-300",
-                isMobile
-                  ? "bottom-0 inset-x-0 rounded-t-3xl"
-                  : "bottom-6 left-6 w-[450px] rounded-3xl"
+                isMobile ? "bottom-0 inset-x-0 rounded-t-3xl" : "bottom-6 left-6 w-[450px] rounded-3xl"
               )}
             >
               {/* Hub Header */}
-              <div className="p-4 md:p-5 border-b border-white/10 flex items-center justify-between">
+              <div className="p-4 border-b border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div>
-                    <h2 className="font-bold text-white text-sm md:text-base leading-tight">Nexus Hub</h2>
-                    {hasActiveStream && (
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <div className="size-1 bg-emerald-500 rounded-full animate-pulse" />
-                        <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">Live Link</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 md:gap-2">
-                  {(state === 'complete' || state === 'error') && (
-                    <button
-                      onClick={handleAnalyze}
-                      title="Analyze fresh chart"
-                      className="p-2 hover:bg-blue-500/10 rounded-lg text-blue-400 border border-blue-500/20 transition-all flex items-center gap-2"
-                    >
-                      <RefreshCw className="size-4" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">New Analysis</span>
-                    </button>
+                  <h2 className="font-bold text-white text-sm">Nexus Hub Analysis</h2>
+                  {hasActiveStream && (
+                    <div className="size-1.5 bg-emerald-500 rounded-full animate-pulse" />
                   )}
-                  <button
-                    onClick={() => setIsMinimized(!isMinimized)}
-                    className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 transition-colors"
-                  >
-                    {isMinimized ? <Maximize2 className="size-4" /> : <Minimize2 className="size-4" />}
-                  </button>
-                  <button
-                    onClick={() => setHubOpen(false)}
-                    className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 transition-colors"
-                  >
-                    <X className="size-4" />
-                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setIsMinimized(!isMinimized)} className="p-2 text-zinc-400"><Minimize2 className="size-4" /></button>
+                  <button onClick={() => setHubOpen(false)} className="p-2 text-zinc-400"><X className="size-4" /></button>
                 </div>
               </div>
 
               {/* Hub Body */}
               <AnimatePresence mode="wait">
                 {!isMinimized && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="flex-1 flex flex-col overflow-hidden"
-                  >
+                  <motion.div className="flex-1 flex flex-col overflow-hidden">
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-6">
-                      {state === 'idle' && (
-                        <div className="h-full flex flex-col items-center justify-center text-center py-10">
-                          <div className="size-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5 mb-4">
-                            <Camera className="size-8 text-zinc-500" />
+
+                      {/* Capture Wizard */}
+                      {state.startsWith('capturing_') && (
+                        <div className="space-y-6 py-4">
+                          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                            <span>Top-Down Capture Sequence</span>
+                            <span>{state === 'capturing_h4' ? '1/3' : state === 'capturing_h1' ? '2/3' : '3/3'}</span>
                           </div>
-                          <p className="text-zinc-200 font-bold mb-1">Ready for Signal Capture</p>
-                          <p className="text-xs text-zinc-500 max-w-[200px]">Click below to scan the live chart for patterns.</p>
+
+                          <div className="grid grid-cols-3 gap-2">
+                            {['h4', 'h1', 'm15'].map((time) => (
+                              <div key={time} className={cn(
+                                "h-1 rounded-full transition-all duration-500",
+                                images[time as keyof MultiImages] ? "bg-emerald-500" : (state === `capturing_${time}` ? "bg-blue-500 animate-pulse" : "bg-white/10")
+                              )} />
+                            ))}
+                          </div>
+
+                          <div className="bg-blue-600/10 border border-blue-500/20 rounded-2xl p-6 text-center space-y-4">
+                            <div className="size-12 bg-blue-600/20 rounded-full flex items-center justify-center mx-auto">
+                              <Camera className="size-6 text-blue-400" />
+                            </div>
+                            <div>
+                              <p className="text-white font-bold text-sm">
+                                Switch to {state === 'capturing_h4' ? '4 Hour' : state === 'capturing_h1' ? '1 Hour' : '15 Minute'} Chart
+                              </p>
+                              <p className="text-xs text-zinc-500 mt-1">Make sure the {state.split('_')[1].toUpperCase()} timeframe is visible.</p>
+                            </div>
+                            <button
+                              onClick={captureCurrentStep}
+                              className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest"
+                            >
+                              Snap {state.split('_')[1].toUpperCase()} Chart
+                            </button>
+                          </div>
                         </div>
                       )}
 
-                      {(state === 'analyzing' || state === 'capturing') && (
-                        <div className="h-full flex flex-col items-center justify-center space-y-4 py-10">
-                          <div className="relative">
-                            <div className="size-14 border-4 border-blue-500/10 border-t-blue-500 rounded-full animate-spin"></div>
-                            <Sparkles className="absolute inset-0 m-auto size-5 text-blue-500 animate-pulse" />
-                          </div>
-                          <p className="text-white text-sm font-medium">
-                            {state === 'capturing' ? 'Select Chart View...' : 'Generating Alpha Signal...'}
-                          </p>
+                      {state === 'analyzing' && (
+                        <div className="h-40 flex flex-col items-center justify-center space-y-4">
+                          <Loader2 className="size-8 text-blue-500 animate-spin" />
+                          <p className="text-white text-xs font-bold uppercase tracking-widest">Processing Top-Down Context...</p>
                         </div>
                       )}
 
@@ -272,25 +287,14 @@ export default function Home() {
                               <ReactMarkdown>{analysis}</ReactMarkdown>
                             </div>
                           </div>
-
-                          <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-600/10 border border-blue-500/20 text-[9px] text-blue-400 uppercase font-bold tracking-widest">
-                            <Sparkles className="size-3" />
-                            Signal Confirmed by Deep-Vision
-                          </div>
                         </div>
                       )}
 
-                      {/* Chat Messages */}
                       {messages.length > 0 && (
                         <div className="space-y-4 pt-6 border-t border-white/5">
                           {messages.map((msg, idx) => (
                             <div key={idx} className={cn("flex flex-col", msg.role === 'user' ? "items-end" : "items-start")}>
-                              <div className={cn(
-                                "rounded-2xl p-3 max-w-[85%] text-xs",
-                                msg.role === 'user'
-                                  ? "bg-blue-600 text-white rounded-tr-none"
-                                  : "bg-zinc-800 text-zinc-200 border border-white/5 rounded-tl-none"
-                              )}>
+                              <div className={cn("rounded-2xl p-3 max-w-[85%] text-xs", msg.role === 'user' ? "bg-blue-600 text-white" : "bg-zinc-800 text-zinc-200")}>
                                 {msg.content}
                               </div>
                             </div>
@@ -299,32 +303,25 @@ export default function Home() {
                       )}
                     </div>
 
-                    {/* Functional Footer */}
-                    <div className="p-4 md:p-5 border-t border-white/10 bg-white/[0.02]">
+                    {/* Footer */}
+                    <div className="p-4 border-t border-white/10">
                       {state === 'complete' ? (
                         <form onSubmit={handleSendMessage} className="relative">
                           <input
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            placeholder="Ask about these targets..."
-                            className="w-full bg-slate-900 border border-white/5 rounded-xl pl-4 pr-12 py-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                            placeholder="Ask about this setup..."
+                            className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-3 text-xs text-white"
                           />
-                          <button
-                            type="submit"
-                            disabled={!input.trim()}
-                            className="absolute right-1.5 top-1.2 p-2 rounded-lg bg-blue-600 text-white disabled:opacity-0 transition-all"
-                          >
-                            <Send className="size-3.5" />
-                          </button>
+                          <button type="submit" className="absolute right-2 top-2 p-2 text-blue-500"><Send className="size-4" /></button>
                         </form>
-                      ) : (
+                      ) : state === 'idle' && (
                         <button
-                          onClick={handleAnalyze}
-                          disabled={state === 'analyzing' || (state === 'capturing' && !hasActiveStream)}
-                          className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                          onClick={startMultiCapture}
+                          className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest"
                         >
-                          {state === 'analyzing' ? 'Processing...' : 'Analyze Chart Now'}
+                          Start Top-Down Analysis
                         </button>
                       )}
                     </div>
@@ -339,25 +336,10 @@ export default function Home() {
   );
 }
 
-// Helper icons
-function BarChart3(props: any) {
+function TradingViewWidgetWrapper({ symbol }: { symbol: string }) {
   return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 3v18h18" />
-      <path d="M18 17V9" />
-      <path d="M13 17V5" />
-      <path d="M8 17v-3" />
-    </svg>
+    <div className="h-full w-full">
+      <TradingViewWidget symbol={symbol} />
+    </div>
   );
 }
