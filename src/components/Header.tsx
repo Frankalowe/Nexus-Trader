@@ -14,6 +14,8 @@ interface TradeSignal {
     exitTime?: string;
     positionSize?: string;
     rr?: string;
+    riskRewardRatio?: string;
+    status?: string;
 }
 
 interface HeaderProps {
@@ -25,6 +27,9 @@ interface HeaderProps {
     hasAnalysis: boolean;
     equity: string;
     onEquityChange: (equity: string) => void;
+    isAutoSync: boolean;
+    onToggleAutoSync: () => void;
+    nextScanIn: number;
 }
 
 const ASSETS = [
@@ -87,112 +92,129 @@ export function Header({
                             />
                         </div>
                     </div>
+                    {/* Live Sync Toggle */}
+                    <button
+                        onClick={onToggleAutoSync}
+                        className={cn(
+                            "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all",
+                            isAutoSync
+                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500 shadow-lg shadow-emerald-500/10"
+                                : "bg-white/5 border-white/5 text-zinc-400 hover:text-white hover:bg-white/10"
+                        )}
+                    >
+                        <div className={cn(
+                            "size-1.5 rounded-full",
+                            isAutoSync ? "bg-emerald-500 animate-pulse" : "bg-zinc-600"
+                        )} />
+                        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+                            {isAutoSync ? `Syncing (${nextScanIn}s)` : "Live Sync"}
+                        </span>
+                    </button>
                 </div>
-            </div>
 
-            <div className="flex items-center gap-3 md:gap-4 shrink-0 flex-1 justify-end">
-                {/* Signal Display - Moved next to analyze button */}
-                {signal && (
-                    <div className="hidden md:flex items-center gap-4 px-4 py-1.5 bg-white/5 rounded-2xl border border-white/10 animate-in fade-in slide-in-from-right-4 duration-500">
-                        <div className="flex items-center gap-2 border-r border-white/10 pr-4">
-                            {signal.action === 'BUY' ? (
-                                <ArrowUpCircle className="size-4 text-emerald-500" />
-                            ) : signal.action === 'SELL' ? (
-                                <ArrowDownCircle className="size-4 text-rose-500" />
-                            ) : null}
-                            <span className={cn(
-                                "font-black text-xs uppercase tracking-widest",
-                                signal.action === 'BUY' ? "text-emerald-500" : signal.action === 'SELL' ? "text-rose-500" : "text-zinc-400"
-                            )}>
-                                {signal.action}
-                            </span>
-                        </div>
-
-                        <div className="flex items-center gap-6">
-                            <div className="flex flex-col">
-                                <span className="text-[8px] text-zinc-500 uppercase font-black tracking-tighter">Level</span>
-                                <span className="text-xs font-bold text-white tabular-nums">{signal.entry}</span>
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-[8px] text-rose-500/80 uppercase font-black tracking-tighter flex items-center gap-1">
-                                    <ShieldAlert className="size-2" /> Stop
+                <div className="flex items-center gap-3 md:gap-4 shrink-0 flex-1 justify-end">
+                    {/* Signal Display - Moved next to analyze button */}
+                    {signal && (
+                        <div className="hidden md:flex items-center gap-4 px-4 py-1.5 bg-white/5 rounded-2xl border border-white/10 animate-in fade-in slide-in-from-right-4 duration-500">
+                            <div className="flex items-center gap-2 border-r border-white/10 pr-4">
+                                {signal.action === 'BUY' ? (
+                                    <ArrowUpCircle className="size-4 text-emerald-500" />
+                                ) : signal.action === 'SELL' ? (
+                                    <ArrowDownCircle className="size-4 text-rose-500" />
+                                ) : null}
+                                <span className={cn(
+                                    "font-black text-xs uppercase tracking-widest",
+                                    signal.action === 'BUY' ? "text-emerald-500" : signal.action === 'SELL' ? "text-rose-500" : "text-zinc-400"
+                                )}>
+                                    {signal.action}
                                 </span>
-                                <span className="text-xs font-bold text-rose-500 tabular-nums">{signal.sl}</span>
                             </div>
-                            <div className="flex flex-col">
-                                <span className="text-[8px] text-emerald-500/80 uppercase font-black tracking-tighter flex items-center gap-1">
-                                    <Target className="size-2" /> Target
-                                </span>
-                                <span className="text-xs font-bold text-emerald-500 tabular-nums">{signal.tp}</span>
+
+                            <div className="flex items-center gap-6">
+                                <div className="flex flex-col">
+                                    <span className="text-[8px] text-zinc-500 uppercase font-black tracking-tighter">Level</span>
+                                    <span className="text-xs font-bold text-white tabular-nums">{signal.entry}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[8px] text-rose-500/80 uppercase font-black tracking-tighter flex items-center gap-1">
+                                        <ShieldAlert className="size-2" /> Stop
+                                    </span>
+                                    <span className="text-xs font-bold text-rose-500 tabular-nums">{signal.sl}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[8px] text-emerald-500/80 uppercase font-black tracking-tighter flex items-center gap-1">
+                                        <Target className="size-2" /> Target
+                                    </span>
+                                    <span className="text-xs font-bold text-emerald-500 tabular-nums">{signal.tp}</span>
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="flex flex-col pl-4 border-l border-white/10 text-right">
-                            <span className="text-[8px] text-emerald-400 uppercase font-black tracking-tighter flex items-center justify-end gap-1">
-                                <Maximize2 className="size-2 text-emerald-400" /> Reward Ratio
-                            </span>
-                            <span className="text-[11px] font-black text-emerald-400 whitespace-nowrap tabular-nums">1:2</span>
-                        </div>
-
-                        {signal.positionSize && (
                             <div className="flex flex-col pl-4 border-l border-white/10 text-right">
-                                <span className="text-[8px] text-blue-400 uppercase font-black tracking-tighter flex items-center justify-end gap-1">
-                                    <Sparkles className="size-2" /> Risk Size (0.5%)
+                                <span className="text-[8px] text-emerald-400 uppercase font-black tracking-tighter flex items-center justify-end gap-1">
+                                    <Maximize2 className="size-2 text-emerald-400" /> Reward Ratio
                                 </span>
-                                <span className="text-[11px] font-black text-blue-400 whitespace-nowrap tabular-nums">{signal.positionSize}</span>
+                                <span className="text-[11px] font-black text-emerald-400 whitespace-nowrap tabular-nums">1:2</span>
                             </div>
-                        )}
 
-                        {(signal.entryTime || signal.exitTime) && (
-                            <div className="flex items-center gap-4 pl-4 border-l border-white/10">
-                                {signal.entryTime && (
-                                    <div className="flex flex-col text-right">
-                                        <span className="text-[8px] text-zinc-500 uppercase font-black tracking-tighter flex items-center justify-end gap-1">
-                                            <Clock className="size-2" /> Entry
-                                        </span>
-                                        <span className="text-[10px] font-bold text-white whitespace-nowrap">{signal.entryTime}</span>
-                                    </div>
-                                )}
-                                {signal.exitTime && (
-                                    <div className="flex flex-col text-right">
-                                        <span className="text-[8px] text-zinc-500 uppercase font-black tracking-tighter flex items-center justify-end gap-1">
-                                            <Clock className="size-2" /> Exit
-                                        </span>
-                                        <span className="text-[10px] font-bold text-white whitespace-nowrap">{signal.exitTime}</span>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                            {signal.positionSize && (
+                                <div className="flex flex-col pl-4 border-l border-white/10 text-right">
+                                    <span className="text-[8px] text-blue-400 uppercase font-black tracking-tighter flex items-center justify-end gap-1">
+                                        <Sparkles className="size-2" /> Risk Size (0.5%)
+                                    </span>
+                                    <span className="text-[11px] font-black text-blue-400 whitespace-nowrap tabular-nums">{signal.positionSize}</span>
+                                </div>
+                            )}
 
-                        {signal.confidence && (
-                            <div className="ml-2 pl-4 border-l border-white/10">
-                                <span className="text-[8px] text-blue-400/80 uppercase font-black tracking-tighter block">Confidence</span>
-                                <span className="text-xs font-bold text-blue-400 tabular-nums">{signal.confidence}</span>
-                            </div>
-                        )}
-                    </div>
-                )}
+                            {(signal.entryTime || signal.exitTime) && (
+                                <div className="flex items-center gap-4 pl-4 border-l border-white/10">
+                                    {signal.entryTime && (
+                                        <div className="flex flex-col text-right">
+                                            <span className="text-[8px] text-zinc-500 uppercase font-black tracking-tighter flex items-center justify-end gap-1">
+                                                <Clock className="size-2" /> Entry
+                                            </span>
+                                            <span className="text-[10px] font-bold text-white whitespace-nowrap">{signal.entryTime}</span>
+                                        </div>
+                                    )}
+                                    {signal.exitTime && (
+                                        <div className="flex flex-col text-right">
+                                            <span className="text-[8px] text-zinc-500 uppercase font-black tracking-tighter flex items-center justify-end gap-1">
+                                                <Clock className="size-2" /> Exit
+                                            </span>
+                                            <span className="text-[10px] font-bold text-white whitespace-nowrap">{signal.exitTime}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
-                <button
-                    onClick={onAnalyze}
-                    disabled={isAnalyzing}
-                    className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-widest transition-all",
-                        isAnalyzing
-                            ? "bg-white/5 text-zinc-500 cursor-not-allowed"
-                            : hasAnalysis
-                                ? "bg-white/5 text-blue-400 border border-blue-500/20 hover:bg-blue-500/10"
-                                : "bg-blue-600 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:scale-[1.02]"
+                            {signal.confidence && (
+                                <div className="ml-2 pl-4 border-l border-white/10">
+                                    <span className="text-[8px] text-blue-400/80 uppercase font-black tracking-tighter block">Confidence</span>
+                                    <span className="text-xs font-bold text-blue-400 tabular-nums">{signal.confidence}</span>
+                                </div>
+                            )}
+                        </div>
                     )}
-                >
-                    {isAnalyzing ? (
-                        <div className="size-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                        <Sparkles className="size-3.5" />
-                    )}
-                    <span>{isAnalyzing ? "Processing" : hasAnalysis ? "Re-Analyze" : "Analyze Chart"}</span>
-                </button>
-            </div>
+
+                    <button
+                        onClick={onAnalyze}
+                        disabled={isAnalyzing}
+                        className={cn(
+                            "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-widest transition-all",
+                            isAnalyzing
+                                ? "bg-white/5 text-zinc-500 cursor-not-allowed"
+                                : hasAnalysis
+                                    ? "bg-white/5 text-blue-400 border border-blue-500/20 hover:bg-blue-500/10"
+                                    : "bg-blue-600 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:scale-[1.02]"
+                        )}
+                    >
+                        {isAnalyzing ? (
+                            <div className="size-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                            <Sparkles className="size-3.5" />
+                        )}
+                        <span>{isAnalyzing ? "Processing" : hasAnalysis ? "Re-Analyze" : "Analyze Chart"}</span>
+                    </button>
+                </div>
         </header>
     );
 }

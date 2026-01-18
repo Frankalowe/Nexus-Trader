@@ -12,6 +12,8 @@ interface Signal {
         positionSize?: string;
         entryTime?: string;
         exitTime?: string;
+        riskRewardRatio?: string;
+        status?: string;
     };
     error?: string;
 }
@@ -42,7 +44,7 @@ function validateSignal(result: Signal, equity: number, riskPercentage: number):
 
     // Determine trade direction
     const isBuy = signal.action === 'BUY';
-    
+
     // Validate SL is on the correct side
     if (isBuy && sl >= entry) {
         return {
@@ -197,10 +199,10 @@ The "analysis" field should include these sections:
         });
 
         const result = JSON.parse(response.choices[0].message.content || '{}');
-        
+
         // Validate Risk/Reward Ratio and SL/TP calculations
         const validated = validateSignal(result, equity, riskPercentage);
-        
+
         return NextResponse.json(validated);
     } catch (error: any) {
         console.error('Analysis error:', error.message || error);

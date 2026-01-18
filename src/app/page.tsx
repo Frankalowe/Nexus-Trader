@@ -28,6 +28,8 @@ interface TradeSignal {
   entryTime?: string;
   exitTime?: string;
   positionSize?: string;
+  riskRewardRatio?: string;
+  status?: string;
 }
 
 export default function Home() {
