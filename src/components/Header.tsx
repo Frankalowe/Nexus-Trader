@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BarChart3, User, Menu, ArrowUpCircle, ArrowDownCircle, Target, ShieldAlert, Sparkles, Clock } from 'lucide-react';
+import { BarChart3, User, Menu, ArrowUpCircle, ArrowDownCircle, Target, ShieldAlert, Sparkles, Clock, Maximize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TradeSignal {
@@ -13,6 +13,7 @@ interface TradeSignal {
     entryTime?: string;
     exitTime?: string;
     positionSize?: string;
+    rr?: string;
 }
 
 interface HeaderProps {
@@ -51,9 +52,6 @@ export function Header({
                     <div className="size-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/40 transition-all">
                         <BarChart3 className="text-white size-5" />
                     </div>
-                    <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent hidden lg:block">
-                        Nexus Trading
-                    </span>
                 </Link>
 
                 {/* Asset Switcher - Scrollable on mobile */}
@@ -127,6 +125,13 @@ export function Header({
                                 </span>
                                 <span className="text-xs font-bold text-emerald-500 tabular-nums">{signal.tp}</span>
                             </div>
+                        </div>
+
+                        <div className="flex flex-col pl-4 border-l border-white/10 text-right">
+                            <span className="text-[8px] text-emerald-400 uppercase font-black tracking-tighter flex items-center justify-end gap-1">
+                                <Maximize2 className="size-2 text-emerald-400" /> Reward Ratio
+                            </span>
+                            <span className="text-[11px] font-black text-emerald-400 whitespace-nowrap tabular-nums">1:2</span>
                         </div>
 
                         {signal.positionSize && (
