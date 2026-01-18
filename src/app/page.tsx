@@ -27,6 +27,7 @@ interface TradeSignal {
   confidence?: string;
   entryTime?: string;
   exitTime?: string;
+  positionSize?: string;
 }
 
 export default function Home() {
@@ -41,6 +42,7 @@ export default function Home() {
   const [currentSymbol, setCurrentSymbol] = useState('BITSTAMP:BTCUSD');
   const [isMobile, setIsMobile] = useState(false);
   const [signal, setSignal] = useState<TradeSignal | null>(null);
+  const [equity, setEquity] = useState<string>('10000');
 
   useEffect(() => {
     const checkMobile = () => {
@@ -83,7 +85,11 @@ export default function Home() {
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: imageBase64 }),
+        body: JSON.stringify({
+          image: imageBase64,
+          equity: parseFloat(equity) || 10000,
+          riskPercentage: 0.5
+        }),
       });
 
       const data = await response.json();
@@ -134,6 +140,8 @@ export default function Home() {
         onAnalyze={handleAnalyze}
         isAnalyzing={state === 'analyzing' || state === 'capturing'}
         hasAnalysis={!!analysis}
+        equity={equity}
+        onEquityChange={setEquity}
       />
 
       <main className="flex-1 flex overflow-hidden relative">

@@ -4,7 +4,7 @@ import { openai } from '@/lib/ai';
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { image } = body;
+        const { image, equity = 10000, riskPercentage = 0.5 } = body;
 
         if (!image) {
             return NextResponse.json({ error: 'No image provided' }, { status: 400 });
@@ -13,6 +13,16 @@ export async function POST(req: Request) {
         if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'YOUR_OPENAI_API_KEY') {
             return NextResponse.json({ error: 'OpenAI API key is not configured. Please add your key to .env.local' }, { status: 500 });
         }
+
+        const istTime = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Asia/Kolkata',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        }).format(new Date());
 
         const response = await openai.chat.completions.create({
             model: "gpt-4o",
@@ -23,13 +33,18 @@ export async function POST(req: Request) {
 YOU ARE CURRENTLY LOOKING AT A LIVE CHART IMAGE provided by a professional trader. 
 Your goal is to provide PRACTICAL, EXECUTABLE signals based on high-level technical analysis (Price Action, Liquidity, SMC/ICT concepts, and Indicator Confluence).
 
+RISK MANAGEMENT RULES:
+1. **Capital Core**: The user has $${equity} equity and wants to risk EXACTLY ${riskPercentage}% ($${(equity * riskPercentage / 100).toFixed(2)}) per trade.
+2. **Position Sizing**: You MUST calculate the recommended position size (Lot size for FX, or Units for Crypto/Indices) based on the distance between Entry and Stop Loss.
+3. **Hard Stop Loss**: SL is mandatory and must be placed at a logical structural point.
+
 PRACTICALITY RULES:
 1. **1-Minute (M1) Scalping Focus**: Analyze the chart specifically for ultra-short-term scalping opportunities. Identify M1 market structure shifts and micro-liquidity sweeps.
 2. **5-Minute Entry Window**: Suggested entry must be executable within the NEXT 5 MINUTES from the current timestamp.
 3. **30-Minute Exit/Expiry**: The setup should hit its target or reach a conclusion within roughly 30 MINUTES of entry.
 4. **Timezone**: Use UTC+5:30 (India Standard Time) for all timestamps.
 5. **Executable Entry**: Suggested entry must be reachable from the current price (Retracement or Breakout). No fantasy prices.
-6. **Realistic Risk/Reward**: Aim for logical scalping RR (e.g. 1:1.5 to 1:2). Place SL tightly behind micro-structure.
+6. **Realistic Risk/Reward**: You MUST maintain a MINIMUM 1:2 RR ratio (Take Profit must be at least twice as far from Entry as Stop Loss is). Place SL tightly behind micro-structure.
 7. **Data Over Vague Text**: NEVER use placeholders like "[Price Level]". Provide EXACT NUMBERS from the chart's Y-axis scale.
 
 RESPONSE FORMAT:
@@ -42,6 +57,7 @@ You MUST return a JSON object with the following structure:
     "entry": "EXACT NUMBER",
     "sl": "EXACT NUMBER",
     "tp": "EXACT NUMBER",
+    "positionSize": "E.g. 0.45 Lots or 1,200 Units",
     "entryTime": "IST Entry Window (e.g. 10:45 AM - 10:50 AM)",
     "exitTime": "IST Target Window (e.g. By 11:20 AM)"
   }
@@ -59,9 +75,13 @@ The "analysis" field should include these sections:
                     content: [
                         {
                             type: "text",
-                            text: `CURRENT TIMESTAMP (IST): 2026-01-18 05:00 AM. 
+                            text: `CURRENT TIMESTAMP (IST): ${istTime}. 
+                            USER EQUITY: $${equity}. 
+                            RISK PER TRADE: ${riskPercentage}%.
                             Look closely at the attached 1-minute chart. Find the current price on the right-hand Y-axis and analyze the candlestick patterns to generate an ultra-fast scalp signal. 
-                            Ensure the entry is within 5 minutes and exit is within 30 minutes of now. Use numbers, not text placeholders.`
+                            Ensure the entry is within 5 minutes and exit is within 30 minutes of now. 
+                            MANDATORY: Maintain a minimum 1:2 Risk-to-Reward ratio. 
+                            Use numbers, not text placeholders.`
                         },
                         { type: "image_url", image_url: { url: image, detail: "high" } }
                     ],

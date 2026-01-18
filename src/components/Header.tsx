@@ -12,6 +12,7 @@ interface TradeSignal {
     confidence?: string;
     entryTime?: string;
     exitTime?: string;
+    positionSize?: string;
 }
 
 interface HeaderProps {
@@ -21,6 +22,8 @@ interface HeaderProps {
     onAnalyze: () => void;
     isAnalyzing: boolean;
     hasAnalysis: boolean;
+    equity: string;
+    onEquityChange: (equity: string) => void;
 }
 
 const ASSETS = [
@@ -31,7 +34,16 @@ const ASSETS = [
     { name: 'ETHUSD', symbol: 'BITSTAMP:ETHUSD' },
 ];
 
-export function Header({ currentSymbol, onSymbolChange, signal, onAnalyze, isAnalyzing, hasAnalysis }: HeaderProps) {
+export function Header({
+    currentSymbol,
+    onSymbolChange,
+    signal,
+    onAnalyze,
+    isAnalyzing,
+    hasAnalysis,
+    equity,
+    onEquityChange
+}: HeaderProps) {
     return (
         <header className="h-16 border-b border-white/5 bg-background/80 backdrop-blur-md sticky top-0 z-50 flex items-center justify-between px-4 md:px-6">
             <div className="flex items-center gap-4 md:gap-8 overflow-hidden flex-1">
@@ -60,6 +72,23 @@ export function Header({ currentSymbol, onSymbolChange, signal, onAnalyze, isAna
                             {item.name}
                         </button>
                     ))}
+                </div>
+
+                {/* Equity & Risk Management */}
+                <div className="hidden lg:flex items-center gap-3 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 ml-2 group hover:border-blue-500/30 transition-all">
+                    <div className="flex flex-col">
+                        <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest">Global Equity</span>
+                        <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-bold text-zinc-400">$</span>
+                            <input
+                                type="number"
+                                value={equity}
+                                onChange={(e) => onEquityChange(e.target.value)}
+                                className="bg-transparent text-xs font-bold text-white w-20 outline-none tabular-nums"
+                                placeholder="10000"
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -99,6 +128,15 @@ export function Header({ currentSymbol, onSymbolChange, signal, onAnalyze, isAna
                                 <span className="text-xs font-bold text-emerald-500 tabular-nums">{signal.tp}</span>
                             </div>
                         </div>
+
+                        {signal.positionSize && (
+                            <div className="flex flex-col pl-4 border-l border-white/10 text-right">
+                                <span className="text-[8px] text-blue-400 uppercase font-black tracking-tighter flex items-center justify-end gap-1">
+                                    <Sparkles className="size-2" /> Risk Size (0.5%)
+                                </span>
+                                <span className="text-[11px] font-black text-blue-400 whitespace-nowrap tabular-nums">{signal.positionSize}</span>
+                            </div>
+                        )}
 
                         {(signal.entryTime || signal.exitTime) && (
                             <div className="flex items-center gap-4 pl-4 border-l border-white/10">
