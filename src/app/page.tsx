@@ -47,7 +47,7 @@ export default function Home() {
   const [isHubOpen, setHubOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentSymbol, setCurrentSymbol] = useState('BITSTAMP:BTCUSD');
+  const [currentSymbol, setCurrentSymbol] = useState('FX:EURUSD');
   const [isMobile, setIsMobile] = useState(false);
   const [signal, setSignal] = useState<TradeSignal | null>(null);
   const [equity, setEquity] = useState<string>('10000');
@@ -75,7 +75,7 @@ export default function Home() {
   const startMultiCapture = () => {
     resetAnalysis();
     setState('capturing_h4');
-    setHubOpen(true);
+    setHubOpen(false);
     setIsMinimized(false);
   };
 
@@ -128,6 +128,7 @@ export default function Home() {
       setAnalysis(data.analysis);
       setSignal(data.signal);
       setState('complete');
+      setHubOpen(true);
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An unexpected error occurred');
@@ -180,121 +181,212 @@ export default function Home() {
           <TradingViewWidget symbol={currentSymbol} />
         </div>
 
-        {/* Floating Hub Toggle */}
-        {!isHubOpen && (
-          <motion.button
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setHubOpen(true)}
-            className="fixed bottom-6 left-6 z-50 size-16 md:size-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center shadow-2xl shadow-blue-500/40 text-white border-4 border-white/10"
-          >
-            <div className="relative">
-              <Sparkles className="size-8" />
-              {state === 'complete' && (
-                <div className="absolute -top-1 -right-1 size-4 bg-emerald-500 rounded-full border-2 border-[#0c0c0e]" />
-              )}
-            </div>
-          </motion.button>
-        )}
+        {/* Floating AI Hub & Capture Controller */}
+        <div className="fixed bottom-6 left-6 z-50 flex flex-col items-start gap-4">
+          <AnimatePresence mode="wait">
+            {/* Capture Step Indicator / Controller */}
+            {state.startsWith('capturing_') && (
+              <motion.div
+                initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                className="bg-[#0c0c0e]/95 backdrop-blur-2xl border border-white/10 p-4 rounded-3xl shadow-2xl flex flex-col gap-4 min-w-[280px]"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Step {state === 'capturing_h4' ? '1' : state === 'capturing_h1' ? '2' : '3'} of 3</span>
+                    <h3 className="text-sm font-bold text-white">
+                      {state === 'capturing_h4' ? '4 Hour Analysis' : state === 'capturing_h1' ? '1 Hour Context' : '15m Entry Setup'}
+                    </h3>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {['h4', 'h1', 'm15'].map((tf) => (
+                      <div
+                        key={tf}
+                        className={cn(
+                          "size-1.5 rounded-full transition-all duration-500",
+                          images[tf as keyof MultiImages] ? "bg-emerald-500" : (state === `capturing_${tf}` ? "bg-blue-500 animate-pulse scale-125" : "bg-white/10")
+                        )}
+                      />
+                    ))}
+                  </div>
+                </div>
 
-        {/* Floating Analysis Hub */}
+                <div className="space-y-3">
+                  <p className="text-[10px] text-zinc-400 leading-relaxed">
+                    Please switch your TradingView chart to the <span className="text-white font-bold">{state.split('_')[1].toUpperCase()}</span> timeframe, then click snap.
+                  </p>
+
+                  <button
+                    onClick={captureCurrentStep}
+                    className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20"
+                  >
+                    <Camera className="size-4" />
+                    Snap {state.split('_')[1].toUpperCase()} Chart
+                  </button>
+
+                  <button
+                    onClick={resetAnalysis}
+                    className="w-full py-2 text-[9px] text-zinc-500 hover:text-zinc-300 font-bold uppercase tracking-widest transition-colors"
+                  >
+                    Cancel Analysis
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Analyzing State */}
+            {state === 'analyzing' && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-[#0c0c0e]/95 backdrop-blur-2xl border border-white/10 p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-4 min-w-[240px]"
+              >
+                <div className="relative">
+                  <div className="size-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
+                  <Sparkles className="size-5 text-blue-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                </div>
+                <div className="text-center">
+                  <p className="text-xs font-black text-white uppercase tracking-widest">Brainstorming...</p>
+                  <p className="text-[10px] text-zinc-500 mt-1">Cross-referencing timeframes</p>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Main Toggle Button (When not capturing/analyzing) */}
+            {!state.startsWith('capturing_') && state !== 'analyzing' && !isHubOpen && (
+              <motion.button
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setHubOpen(true)}
+                className="size-16 md:size-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center shadow-2xl shadow-blue-500/40 text-white border-4 border-white/10 group relative"
+              >
+                <div className="absolute inset-0 rounded-full bg-blue-400 group-hover:animate-ping opacity-0 group-hover:opacity-20 transition-all" />
+                <div className="relative">
+                  {state === 'complete' ? <MessageSquare className="size-8" /> : <Sparkles className="size-8" />}
+                  {state === 'complete' && (
+                    <div className="absolute -top-1 -right-1 size-4 bg-emerald-500 rounded-full border-2 border-[#0c0c0e] flex items-center justify-center">
+                      <div className="size-1.5 bg-white rounded-full animate-pulse" />
+                    </div>
+                  )}
+                </div>
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Floating Analysis Hub (The Main Window) */}
         <AnimatePresence>
           {isHubOpen && (
             <motion.div
-              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              initial={{ opacity: 0, y: 50, scale: 0.9, x: isMobile ? 0 : -20 }}
               animate={{
                 opacity: 1,
                 y: 0,
                 scale: 1,
+                x: 0,
                 height: isMinimized ? 'auto' : (isMobile ? '80vh' : '700px')
               }}
-              exit={{ opacity: 0, y: 50, scale: 0.9 }}
+              exit={{ opacity: 0, y: 50, scale: 0.9, x: isMobile ? 0 : -20 }}
               className={cn(
-                "fixed z-50 bg-[#0c0c0e]/95 backdrop-blur-2xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col transition-all duration-300",
-                isMobile ? "bottom-0 inset-x-0 rounded-t-3xl" : "bottom-6 left-6 w-[450px] rounded-3xl"
+                "fixed z-50 bg-[#0b0b0d]/98 backdrop-blur-3xl border border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.6)] flex flex-col transition-all duration-300",
+                isMobile ? "bottom-0 inset-x-0 rounded-t-[2.5rem]" : "bottom-6 left-6 w-[480px] rounded-[2.5rem]"
               )}
             >
               {/* Hub Header */}
-              <div className="p-4 border-b border-white/10 flex items-center justify-between">
+              <div className="p-6 border-b border-white/5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <h2 className="font-bold text-white text-sm">Nexus Hub Analysis</h2>
-                  {hasActiveStream && (
-                    <div className="size-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                  )}
+                  <div className="size-10 rounded-2xl bg-gradient-to-br from-blue-600/20 to-indigo-600/20 border border-blue-500/20 flex items-center justify-center">
+                    <Sparkles className="size-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <h2 className="font-black text-white text-xs uppercase tracking-[0.2em]">Nexus AI Intelligence</h2>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="size-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                      <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Neural Link Active</span>
+                    </div>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => setIsMinimized(!isMinimized)} className="p-2 text-zinc-400"><Minimize2 className="size-4" /></button>
-                  <button onClick={() => setHubOpen(false)} className="p-2 text-zinc-400"><X className="size-4" /></button>
+                  <button
+                    onClick={() => setIsMinimized(!isMinimized)}
+                    className="size-8 rounded-full flex items-center justify-center hover:bg-white/5 text-zinc-400 transition-colors"
+                  >
+                    <Minimize2 className="size-4" />
+                  </button>
+                  <button
+                    onClick={() => setHubOpen(false)}
+                    className="size-8 rounded-full flex items-center justify-center hover:bg-white/5 text-zinc-400 transition-colors"
+                  >
+                    <X className="size-4" />
+                  </button>
                 </div>
               </div>
 
               {/* Hub Body */}
               <AnimatePresence mode="wait">
                 {!isMinimized && (
-                  <motion.div className="flex-1 flex flex-col overflow-hidden">
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-6">
-
-                      {/* Capture Wizard */}
-                      {state.startsWith('capturing_') && (
-                        <div className="space-y-6 py-4">
-                          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                            <span>Top-Down Capture Sequence</span>
-                            <span>{state === 'capturing_h4' ? '1/3' : state === 'capturing_h1' ? '2/3' : '3/3'}</span>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex-1 flex flex-col overflow-hidden"
+                  >
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
+                      {/* Empty State / Welcome */}
+                      {state === 'idle' && !analysis && (
+                        <div className="h-full flex flex-col items-center justify-center text-center space-y-6 py-12">
+                          <div className="size-20 rounded-[2.5rem] bg-blue-600/10 border border-blue-500/20 flex items-center justify-center">
+                            <BarChart2 className="size-10 text-blue-500" />
                           </div>
-
-                          <div className="grid grid-cols-3 gap-2">
-                            {['h4', 'h1', 'm15'].map((time) => (
-                              <div key={time} className={cn(
-                                "h-1 rounded-full transition-all duration-500",
-                                images[time as keyof MultiImages] ? "bg-emerald-500" : (state === `capturing_${time}` ? "bg-blue-500 animate-pulse" : "bg-white/10")
-                              )} />
-                            ))}
+                          <div>
+                            <h3 className="text-xl font-bold text-white">Top-Down Analysis</h3>
+                            <p className="text-sm text-zinc-500 max-w-[280px] mx-auto mt-2">
+                              Nexus AI will analyze the chart across multiple timeframes to provide high-probability trade setups.
+                            </p>
                           </div>
-
-                          <div className="bg-blue-600/10 border border-blue-500/20 rounded-2xl p-6 text-center space-y-4">
-                            <div className="size-12 bg-blue-600/20 rounded-full flex items-center justify-center mx-auto">
-                              <Camera className="size-6 text-blue-400" />
-                            </div>
-                            <div>
-                              <p className="text-white font-bold text-sm">
-                                Switch to {state === 'capturing_h4' ? '4 Hour' : state === 'capturing_h1' ? '1 Hour' : '15 Minute'} Chart
-                              </p>
-                              <p className="text-xs text-zinc-500 mt-1">Make sure the {state.split('_')[1].toUpperCase()} timeframe is visible.</p>
-                            </div>
-                            <button
-                              onClick={captureCurrentStep}
-                              className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest"
-                            >
-                              Snap {state.split('_')[1].toUpperCase()} Chart
-                            </button>
-                          </div>
+                          <button
+                            onClick={startMultiCapture}
+                            className="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-xs uppercase tracking-[0.15em] transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+                          >
+                            Begin Sequence
+                          </button>
                         </div>
                       )}
 
-                      {state === 'analyzing' && (
-                        <div className="h-40 flex flex-col items-center justify-center space-y-4">
-                          <Loader2 className="size-8 text-blue-500 animate-spin" />
-                          <p className="text-white text-xs font-bold uppercase tracking-widest">Processing Top-Down Context...</p>
-                        </div>
-                      )}
-
+                      {/* Analysis Results */}
                       {analysis && (
                         <div className="space-y-6">
-                          <div className="prose prose-invert prose-xs max-w-none">
-                            <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/20 text-slate-200 leading-relaxed text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Market Intel</span>
+                            <div className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
+                              <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">Confidence: {signal?.confidence || 'N/A'}</span>
+                            </div>
+                          </div>
+
+                          <div className="prose prose-invert prose-sm max-w-none">
+                            <div className="p-6 rounded-[2rem] bg-gradient-to-b from-white/[0.03] to-transparent border border-white/5 text-zinc-300 leading-relaxed text-sm shadow-inner">
                               <ReactMarkdown>{analysis}</ReactMarkdown>
                             </div>
                           </div>
                         </div>
                       )}
 
+                      {/* Chat Messages */}
                       {messages.length > 0 && (
-                        <div className="space-y-4 pt-6 border-t border-white/5">
+                        <div className="space-y-6 pt-8 border-t border-white/5">
                           {messages.map((msg, idx) => (
-                            <div key={idx} className={cn("flex flex-col", msg.role === 'user' ? "items-end" : "items-start")}>
-                              <div className={cn("rounded-2xl p-3 max-w-[85%] text-xs", msg.role === 'user' ? "bg-blue-600 text-white" : "bg-zinc-800 text-zinc-200")}>
+                            <div key={idx} className={cn("flex flex-col gap-2", msg.role === 'user' ? "items-end" : "items-start")}>
+                              <span className="text-[8px] font-black text-zinc-600 uppercase tracking-widest ml-1">
+                                {msg.role === 'user' ? 'You' : 'Nexus AI'}
+                              </span>
+                              <div className={cn(
+                                "rounded-[1.5rem] p-4 max-w-[90%] text-sm leading-relaxed shadow-sm",
+                                msg.role === 'user'
+                                  ? "bg-blue-600 text-white rounded-tr-none"
+                                  : "bg-[#16161a] border border-white/5 text-zinc-300 rounded-tl-none"
+                              )}>
                                 {msg.content}
                               </div>
                             </div>
@@ -303,26 +395,34 @@ export default function Home() {
                       )}
                     </div>
 
-                    {/* Footer */}
-                    <div className="p-4 border-t border-white/10">
+                    {/* Interaction Footer */}
+                    <div className="p-6 border-t border-white/5 bg-black/20">
                       {state === 'complete' ? (
-                        <form onSubmit={handleSendMessage} className="relative">
+                        <form onSubmit={handleSendMessage} className="relative group">
                           <input
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            placeholder="Ask about this setup..."
-                            className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-3 text-xs text-white"
+                            placeholder="Ask a follow-up question..."
+                            className="w-full bg-[#16161a] border border-white/10 focus:border-blue-500/50 rounded-2xl px-5 py-4 text-sm text-white outline-none transition-all placeholder:text-zinc-600 pr-14"
                           />
-                          <button type="submit" className="absolute right-2 top-2 p-2 text-blue-500"><Send className="size-4" /></button>
+                          <button
+                            type="submit"
+                            disabled={!input.trim()}
+                            className="absolute right-2 top-2 size-10 rounded-xl bg-blue-600 flex items-center justify-center text-white hover:bg-blue-500 disabled:opacity-50 disabled:hover:bg-blue-600 transition-all shadow-lg shadow-blue-600/20"
+                          >
+                            <Send className="size-4" />
+                          </button>
                         </form>
                       ) : state === 'idle' && (
-                        <button
-                          onClick={startMultiCapture}
-                          className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest"
-                        >
-                          Start Top-Down Analysis
-                        </button>
+                        <div className="flex gap-4">
+                          <button
+                            onClick={startMultiCapture}
+                            className="flex-1 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+                          >
+                            New Analysis
+                          </button>
+                        </div>
                       )}
                     </div>
                   </motion.div>
