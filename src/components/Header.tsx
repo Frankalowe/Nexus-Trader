@@ -35,6 +35,13 @@ const ASSETS = [
     { name: 'GBPUSD', symbol: 'FX:GBPUSD' },
     { name: 'USDJPY', symbol: 'FX:USDJPY' },
     { name: 'ETHUSD', symbol: 'BITSTAMP:ETHUSD' },
+    { name: 'AUDCHF', symbol: 'FX:AUDCHF' },
+    { name: 'AUDUSD', symbol: 'FX:AUDUSD' },
+    { name: 'USDCHF', symbol: 'FX:USDCHF' },
+    { name: 'AUDCAD', symbol: 'FX:AUDCAD' },
+    { name: 'AUDNZD', symbol: 'FX:AUDNZD' },
+    { name: 'USDCAD', symbol: 'FX:USDCAD' },
+    { name: 'AUDJPY', symbol: 'FX:AUDJPY' },
 ];
 
 export function Header({
