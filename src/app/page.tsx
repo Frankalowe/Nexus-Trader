@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Dynamic import for TradingView to avoid SSR issues
 const TradingViewWidget = dynamic(() => import('@/components/TradingViewWidget'), { ssr: false });
 
-type AnalysisState = 'idle' | 'capturing_h4' | 'capturing_h1' | 'capturing_m15' | 'analyzing' | 'complete' | 'error';
+type AnalysisState = 'idle' | 'capturing_h4' | 'capturing_h1' | 'capturing_m15' | 'capturing_m1' | 'analyzing' | 'complete' | 'error';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -36,12 +36,13 @@ interface MultiImages {
   h4: string | null;
   h1: string | null;
   m15: string | null;
+  m1: string | null;
 }
 
 export default function Home() {
   const [state, setState] = useState<AnalysisState>('idle');
   const [analysis, setAnalysis] = useState<string | null>(null);
-  const [images, setImages] = useState<MultiImages>({ h4: null, h1: null, m15: null });
+  const [images, setImages] = useState<MultiImages>({ h4: null, h1: null, m15: null, m1: null });
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isHubOpen, setHubOpen] = useState(false);
@@ -64,7 +65,7 @@ export default function Home() {
 
   const resetAnalysis = () => {
     setState('idle');
-    setImages({ h4: null, h1: null, m15: null });
+    setImages({ h4: null, h1: null, m15: null, m1: null });
     setAnalysis(null);
     setSignal(null);
     setError(null);
@@ -101,7 +102,10 @@ export default function Home() {
       setImages(prev => ({ ...prev, h1: imageBase64 }));
       setState('capturing_m15');
     } else if (currentStep === 'capturing_m15') {
-      const finalImages = { ...images, m15: imageBase64 };
+      setImages(prev => ({ ...prev, m15: imageBase64 }));
+      setState('capturing_m1');
+    } else if (currentStep === 'capturing_m1') {
+      const finalImages = { ...images, m1: imageBase64 };
       setImages(finalImages);
       runTopDownAnalysis(finalImages);
     }
@@ -149,7 +153,7 @@ export default function Home() {
         body: JSON.stringify({
           messages: [...messages, newMsg],
           context: analysis,
-          image: images.m15 // Use 15m chart as primary chat context
+          image: images.m1 || images.m15 // Use 1m chart or 15m as primary chat context
         }),
       });
 
@@ -190,13 +194,13 @@ export default function Home() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Step {state === 'capturing_h4' ? '1' : state === 'capturing_h1' ? '2' : '3'} of 3</span>
+                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Step {state === 'capturing_h4' ? '1' : state === 'capturing_h1' ? '2' : state === 'capturing_m15' ? '3' : '4'} of 4</span>
                     <h3 className="text-sm font-bold text-white">
-                      {state === 'capturing_h4' ? '4 Hour Analysis' : state === 'capturing_h1' ? '1 Hour Context' : '15m Entry Setup'}
+                      {state === 'capturing_h4' ? '4 Hour Analysis' : state === 'capturing_h1' ? '1 Hour Context' : state === 'capturing_m15' ? '15m Entry Setup' : '1m Micro Execution'}
                     </h3>
                   </div>
                   <div className="flex gap-1.5">
-                    {['h4', 'h1', 'm15'].map((tf) => (
+                    {['h4', 'h1', 'm15', 'm1'].map((tf) => (
                       <div
                         key={tf}
                         className={cn(

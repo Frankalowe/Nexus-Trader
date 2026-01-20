@@ -127,8 +127,8 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { images, equity = 10000, riskPercentage = 0.5, symbol = "Unknown" } = body;
 
-        if (!images || !images.h4 || !images.h1 || !images.m15) {
-            return NextResponse.json({ error: 'Missing images for 4H, 1H, or 15m timeframes.' }, { status: 400 });
+        if (!images || !images.h4 || !images.h1 || !images.m15 || !images.m1) {
+            return NextResponse.json({ error: 'Missing images for 4H, 1H, 15m, or 1m timeframes.' }, { status: 400 });
         }
 
         if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'YOUR_OPENAI_API_KEY') {
@@ -152,7 +152,7 @@ export async function POST(req: Request) {
                 {
                     role: "system",
                     content: `You are the Nexus Elite Algorithmic Analyst. 
-Your task is to perform a professional TOP-DOWN analysis with 99.9% precision.
+Your task is to perform a professional 4-STEP TOP-DOWN analysis with 99.9% precision.
 You specialize in advanced Smart Money Concepts (SMC), ICT methods, and Institutional Order Flow.
 
 EXPERTISE TOOLS:
@@ -168,9 +168,10 @@ STRICT OPERATING PROTOCOL:
 2. **Multi-Timeframe Flow**: 
    - 4H (HTF): Define dominant order flow, primary bias, and major S/D zones.
    - 1H (MTF): Refine structural alignment, identify FVGs, and track IRL/ERL transitions.
-   - 15m (LTF): Pinpoint execution triggers (S-M-T divergence, Liquidity Sweep into BB/OB, or AMD completion).
-3. **High Probability Only**: Confluence across ALL three timeframes is required. If structure is murky, stay "NEUTRAL".
-4. **Precision Pricing**: Read the Y-axis from the M15 chart for exact Entry, SL, and TP.
+   - 15m (LTF): Pinpoint execution areas and confirm structural shifts.
+   - 1m (Micro): Precision entry timing, looking for micro-liquidity sweeps and immediate order flow displacement.
+3. **High Probability Only**: Confluence across ALL four timeframes is required. If structure is murky, stay "NEUTRAL".
+4. **Precision Pricing**: Read the Y-axis from the 1m chart for exact Entry, SL, and TP.
 5. **1:2 RR Minimum**: TP must target at least 2x the risk.
 
 ASSET CONTEXT: ${symbol}
@@ -183,35 +184,38 @@ RISK: ${riskPercentage}%`
                     content: [
                         {
                             type: "text",
-                            text: `Analyze these three charts for ${symbol} and generate an ultra-fast scalp signal based on Top-Down confluence.
+                            text: `Analyze these four charts for ${symbol} and generate an ultra-fast scalp signal based on 4-step Top-Down confluence.
 
 CHARTS PROVIDED:
 1. Higher Time Frame (4H)
 2. Medium Time Frame (1H)
-3. Execution Time Frame (15m)
+3. Lower Time Frame (15m)
+4. Micro Entry Frame (1m)
 
 Follow this logical flow:
-1. Describe the 4H Bias and key levels.
-2. Describe the 1H structural alignment/FVGs.
-3. Use the 15m chart to pinpoint the entry (look for Liquidity Sweep followed by MSS).
+1. Describe the 4H Macro Bias.
+2. Describe the 1H Structural Refinement.
+3. Describe the 15m Setup Confirmation.
+4. Use the 1m chart to pinpoint the micro-entry trigger (Micro MSS/Fair Value Gaps).
 
 Return JSON:
 {
-  "analysis": "### 1. HTF Outlook (4H)\nFocus on the macro bias and major IRL/ERL.\n\n### 2. MTF Refinement (1H)\nIdentity the AMD phase and key institutional hurdles (OB/BB/FVG).\n\n### 3. LTF Execution (15m)\nDescribe the specific trigger (e.g., London Open liquidity sweep into 1H FVG followed by 15m MSS).\n\n### 4. Advanced Confluence\nSummary of how Session, Structure, and Liquidity align for this setup.",
+  "analysis": "### 1. Macro Outlook (4H)\nFocus on macro order flow.\n\n### 2. MTF Alignment (1H)\nIdentity the key institutional levels.\n\n### 3. LTF Setup (15m)\nIdentify the confirmation area.\n\n### 4. Micro Entry (1m)\nDescribe the specific 1m trigger for the ultra-scalp.\n\n### 5. Final Confluence\nSummary of how all 4 timeframes align.",
   "signal": {
     "action": "BUY" | "SELL" | "NEUTRAL",
     "confidence": "XX%",
-    "entry": "Exact number from 15m chart",
-    "sl": "Exact number from 15m chart",
-    "tp": "Exact number from 15m chart",
-    "entryTime": "IST window (e.g., NY Killzone)",
+    "entry": "Exact number from 1m chart",
+    "sl": "Exact number from 1m chart",
+    "tp": "Exact number from 1m chart",
+    "entryTime": "IST window",
     "exitTime": "Target window"
   }
-}`
+}`,
                         },
                         { type: "image_url", image_url: { url: images.h4, detail: "high" } },
                         { type: "image_url", image_url: { url: images.h1, detail: "high" } },
-                        { type: "image_url", image_url: { url: images.m15, detail: "high" } }
+                        { type: "image_url", image_url: { url: images.m15, detail: "high" } },
+                        { type: "image_url", image_url: { url: images.m1, detail: "high" } }
                     ],
                 },
             ],
