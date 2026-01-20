@@ -25,8 +25,6 @@ interface HeaderProps {
     onAnalyze: () => void;
     isAnalyzing: boolean;
     hasAnalysis: boolean;
-    equity: string;
-    onEquityChange: (equity: string) => void;
 }
 
 const ASSETS = [
@@ -51,8 +49,6 @@ export function Header({
     onAnalyze,
     isAnalyzing,
     hasAnalysis,
-    equity,
-    onEquityChange,
 }: HeaderProps) {
     return (
         <header className="h-16 border-b border-white/5 bg-background/80 backdrop-blur-md sticky top-0 z-50 flex items-center justify-between px-4 md:px-6">
@@ -82,23 +78,6 @@ export function Header({
                             </option>
                         ))}
                     </select>
-                </div>
-
-                {/* Equity & Risk Management */}
-                <div className="hidden lg:flex items-center gap-3 bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 ml-2 group hover:border-blue-500/30 transition-all">
-                    <div className="flex flex-col">
-                        <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest">Global Equity</span>
-                        <div className="flex items-center gap-1">
-                            <span className="text-[10px] font-bold text-zinc-400">$</span>
-                            <input
-                                type="number"
-                                value={equity}
-                                onChange={(e) => onEquityChange(e.target.value)}
-                                className="bg-transparent text-xs font-bold text-white w-20 outline-none tabular-nums"
-                                placeholder="10000"
-                            />
-                        </div>
-                    </div>
                 </div>
             </div>
 

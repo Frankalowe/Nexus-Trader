@@ -50,7 +50,6 @@ export default function Home() {
   const [currentSymbol, setCurrentSymbol] = useState('FX:EURUSD');
   const [isMobile, setIsMobile] = useState(false);
   const [signal, setSignal] = useState<TradeSignal | null>(null);
-  const [equity, setEquity] = useState<string>('10000');
 
   useEffect(() => {
     const checkMobile = () => {
@@ -116,7 +115,6 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           images: finalImages,
-          equity: parseFloat(equity) || 10000,
           riskPercentage: 0.5,
           symbol: currentSymbol
         }),
@@ -171,8 +169,6 @@ export default function Home() {
         onAnalyze={startMultiCapture}
         isAnalyzing={state === 'analyzing' || state.startsWith('capturing_')}
         hasAnalysis={!!analysis}
-        equity={equity}
-        onEquityChange={setEquity}
       />
 
       <main className="flex-1 flex overflow-hidden relative">
