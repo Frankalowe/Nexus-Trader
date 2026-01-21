@@ -27,20 +27,39 @@ interface HeaderProps {
     hasAnalysis: boolean;
 }
 
-const ASSETS = [
-    { name: 'BTCUSD', symbol: 'BITSTAMP:BTCUSD' },
-    { name: 'EURUSD', symbol: 'FX:EURUSD' },
-    { name: 'GBPUSD', symbol: 'FX:GBPUSD' },
-    { name: 'USDJPY', symbol: 'FX:USDJPY' },
-    { name: 'ETHUSD', symbol: 'BITSTAMP:ETHUSD' },
-    { name: 'AUDCHF', symbol: 'FX:AUDCHF' },
-    { name: 'AUDUSD', symbol: 'FX:AUDUSD' },
-    { name: 'USDCHF', symbol: 'FX:USDCHF' },
-    { name: 'AUDCAD', symbol: 'FX:AUDCAD' },
-    { name: 'AUDNZD', symbol: 'FX:AUDNZD' },
-    { name: 'USDCAD', symbol: 'FX:USDCAD' },
-    { name: 'AUDJPY', symbol: 'FX:AUDJPY' },
+const ASSET_CATEGORIES = [
+    {
+        label: 'Commodities',
+        assets: [
+            { name: 'XAUUSD', symbol: 'OANDA:XAUUSD' },
+            { name: 'XAGUSD', symbol: 'OANDA:XAGUSD' },
+        ]
+    },
+    {
+        label: 'Forex',
+        assets: [
+            { name: 'EURUSD', symbol: 'FX:EURUSD' },
+            { name: 'GBPUSD', symbol: 'FX:GBPUSD' },
+            { name: 'USDJPY', symbol: 'FX:USDJPY' },
+            { name: 'AUDUSD', symbol: 'FX:AUDUSD' },
+            { name: 'USDCHF', symbol: 'FX:USDCHF' },
+            { name: 'USDCAD', symbol: 'FX:USDCAD' },
+            { name: 'AUDCHF', symbol: 'FX:AUDCHF' },
+            { name: 'AUDCAD', symbol: 'FX:AUDCAD' },
+            { name: 'AUDNZD', symbol: 'FX:AUDNZD' },
+            { name: 'AUDJPY', symbol: 'FX:AUDJPY' },
+        ]
+    },
+    {
+        label: 'Crypto',
+        assets: [
+            { name: 'BTCUSD', symbol: 'BITSTAMP:BTCUSD' },
+            { name: 'ETHUSD', symbol: 'BITSTAMP:ETHUSD' },
+        ]
+    }
 ];
+
+const ASSETS = ASSET_CATEGORIES.flatMap(c => c.assets);
 
 export function Header({
     currentSymbol,
@@ -72,10 +91,14 @@ export function Header({
                         onChange={(e) => onSymbolChange(e.target.value)}
                         className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                     >
-                        {ASSETS.map((item) => (
-                            <option key={item.symbol} value={item.symbol}>
-                                {item.name}
-                            </option>
+                        {ASSET_CATEGORIES.map((category) => (
+                            <optgroup key={category.label} label={category.label}>
+                                {category.assets.map((item) => (
+                                    <option key={item.symbol} value={item.symbol}>
+                                        {item.name}
+                                    </option>
+                                ))}
+                            </optgroup>
                         ))}
                     </select>
                 </div>

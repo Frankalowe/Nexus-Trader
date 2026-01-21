@@ -96,10 +96,20 @@ function validateSignal(result: Signal, equity: number, riskPercentage: number, 
     const riskAmount = equity * (riskPercentage / 100);
     let positionSizeStr = "";
 
-    // Determine if it's Forex for Lot calculation
-    const isForex = symbol.includes('FX:') || symbol.includes('USD') || symbol.includes('JPY') || symbol.includes('EUR') || symbol.includes('GBP');
+    // Precise position sizing for different asset classes
+    const isGold = symbol.toLowerCase().includes('xau');
+    const isSilver = symbol.toLowerCase().includes('xag');
+    const isForex = !isGold && !isSilver && (symbol.includes('FX:') || symbol.includes('USD') || symbol.includes('JPY') || symbol.includes('EUR') || symbol.includes('GBP'));
 
-    if (isForex) {
+    if (isGold) {
+        const units = riskAmount / riskDistance;
+        const lots = (units / 100).toFixed(2); // 1 Lot = 100 oz
+        positionSizeStr = `${lots} Lots (Gold)`;
+    } else if (isSilver) {
+        const units = riskAmount / riskDistance;
+        const lots = (units / 5000).toFixed(2); // 1 Lot = 5000 oz
+        positionSizeStr = `${lots} Lots (Silver)`;
+    } else if (isForex) {
         const units = riskAmount / riskDistance;
         const lots = (units / 100000).toFixed(2);
         positionSizeStr = `${lots} Lots`;
