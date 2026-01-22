@@ -48,6 +48,13 @@ const ASSET_CATEGORIES = [
             { name: 'AUDCAD', symbol: 'FX:AUDCAD' },
             { name: 'AUDNZD', symbol: 'FX:AUDNZD' },
             { name: 'AUDJPY', symbol: 'FX:AUDJPY' },
+            { name: 'EURJPY', symbol: 'FX:EURJPY' },
+            { name: 'GBPJPY', symbol: 'FX:GBPJPY' },
+            { name: 'CHFJPY', symbol: 'FX:CHFJPY' },
+            { name: 'CADJPY', symbol: 'FX:CADJPY' },
+            { name: 'NZDJPY', symbol: 'FX:NZDJPY' },
+            { name: 'ZARJPY', symbol: 'FX:ZARJPY' },
+            { name: 'MXNJPY', symbol: 'FX:MXNJPY' },
         ]
     },
     {

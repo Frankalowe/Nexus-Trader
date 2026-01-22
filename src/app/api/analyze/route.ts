@@ -99,6 +99,7 @@ function validateSignal(result: Signal, equity: number, riskPercentage: number, 
     // Precise position sizing for different asset classes
     const isGold = symbol.toLowerCase().includes('xau');
     const isSilver = symbol.toLowerCase().includes('xag');
+    const isJpy = symbol.toLowerCase().includes('jpy');
     const isForex = !isGold && !isSilver && (symbol.includes('FX:') || symbol.includes('USD') || symbol.includes('JPY') || symbol.includes('EUR') || symbol.includes('GBP'));
 
     if (isGold) {
@@ -111,7 +112,9 @@ function validateSignal(result: Signal, equity: number, riskPercentage: number, 
         positionSizeStr = `${lots} Lots (Silver)`;
     } else if (isForex) {
         const units = riskAmount / riskDistance;
-        const lots = (units / 100000).toFixed(2);
+        // For JPY pairs, the price distance for a pip is 0.01 vs 0.0001 for others.
+        // We adjust the unit calculation to account for this 100x difference.
+        const lots = isJpy ? (units / 1000).toFixed(2) : (units / 100000).toFixed(2);
         positionSizeStr = `${lots} Lots`;
     } else {
         const units = (riskAmount / riskDistance).toFixed(2);
@@ -175,14 +178,19 @@ EXPERTISE TOOLS:
 
 STRICT OPERATING PROTOCOL:
 1. **Session Awareness**: Use the current IST time to identify the trading window (Asia, London Open, NY Killzone, or London Close) and its impact on volatility/bias.
-2. **Multi-Timeframe Flow**: 
+2. **Current Price Anchor**: Identify the CURRENT MARKET PRICE from the 1m chart axis before proposing any entry. All levels must be relative to this price.
+3. **Decimal Precision**: 
+   - For JPY pairs: Use 3 decimal places (e.g., 150.123).
+   - For Gold/Silver: Use 2 decimal places (e.g., 2050.50).
+   - For other Forex: Use 5 decimal places (e.g., 1.08505).
+4. **Multi-Timeframe Flow**: 
    - 4H (HTF): Define dominant order flow, primary bias, and major S/D zones.
    - 1H (MTF): Refine structural alignment, identify FVGs, and track IRL/ERL transitions.
    - 15m (LTF): Pinpoint execution areas and confirm structural shifts.
    - 1m (Micro): Precision entry timing, looking for micro-liquidity sweeps and immediate order flow displacement.
-3. **High Probability Only**: Confluence across ALL four timeframes is required. If structure is murky, stay "NEUTRAL".
-4. **Precision Pricing**: Read the Y-axis from the 1m chart for exact Entry, SL, and TP.
-5. **1:2 RR Minimum**: TP must target at least 2x the risk.
+5. **High Probability Only**: Confluence across ALL four timeframes is required. If structure is murky or the current price has already moved too far from the setup, stay "NEUTRAL".
+6. **Precision Pricing**: Read the Y-axis from the 1m chart for exact Entry, SL, and TP. DO NOT hallucinate numbers. Use the numbers visible on the right-side scale.
+7. **1:2 RR Minimum**: TP must target at least 2x the risk. If a 1:2 setup isn't naturally present, do not force it; mark as "NEUTRAL".
 
 ASSET CONTEXT: ${symbol}
 CURRENT IST TIME: ${istTime}
