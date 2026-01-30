@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BarChart3, User, Menu, ArrowUpCircle, ArrowDownCircle, Target, ShieldAlert, Sparkles, Clock, Maximize2, ChevronDown } from 'lucide-react';
+import { BarChart3, User, Menu, ArrowUpCircle, ArrowDownCircle, Target, ShieldAlert, Sparkles, Clock, Maximize2, ChevronDown, Wallet, ShieldCheck, Percent } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TradeSignal {
@@ -21,6 +21,10 @@ interface TradeSignal {
 interface HeaderProps {
     currentSymbol: string;
     onSymbolChange: (symbol: string) => void;
+    equity: number;
+    onEquityChange: (equity: number) => void;
+    riskPercentage: number;
+    onRiskChange: (risk: number) => void;
     signal?: TradeSignal | null;
     onAnalyze: () => void;
     isAnalyzing: boolean;
@@ -62,6 +66,15 @@ const ASSET_CATEGORIES = [
         assets: [
             { name: 'BTCUSD', symbol: 'BITSTAMP:BTCUSD' },
             { name: 'ETHUSD', symbol: 'BITSTAMP:ETHUSD' },
+            { name: 'SOLUSD', symbol: 'BINANCE:SOLUSD' },
+        ]
+    },
+    {
+        label: 'Indices',
+        assets: [
+            { name: 'US30', symbol: 'FOREXCOM:DJI' },
+            { name: 'NAS100', symbol: 'FOREXCOM:NSXUSD' },
+            { name: 'SPX500', symbol: 'FOREXCOM:SPXUSD' },
         ]
     }
 ];
@@ -71,6 +84,10 @@ const ASSETS = ASSET_CATEGORIES.flatMap(c => c.assets);
 export function Header({
     currentSymbol,
     onSymbolChange,
+    equity,
+    onEquityChange,
+    riskPercentage,
+    onRiskChange,
     signal,
     onAnalyze,
     isAnalyzing,
@@ -108,6 +125,45 @@ export function Header({
                             </optgroup>
                         ))}
                     </select>
+                </div>
+
+                {/* Risk Management Controls */}
+                <div className="hidden lg:flex items-center gap-4 border-l border-white/10 pl-6 h-8">
+                    <div className="flex items-center gap-3 group">
+                        <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/10 focus-within:border-blue-500/50 transition-all">
+                            <Wallet className="size-3.5 text-zinc-500" />
+                            <div className="flex flex-col">
+                                <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest leading-none">Equity</span>
+                                <input
+                                    type="number"
+                                    value={equity}
+                                    onChange={(e) => onEquityChange(parseInt(e.target.value) || 0)}
+                                    className="bg-transparent text-[11px] font-bold text-white w-20 outline-none border-none p-0 focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-xl border border-white/10 focus-within:border-emerald-500/50 transition-all">
+                            <ShieldCheck className="size-3.5 text-emerald-500/70" />
+                            <div className="flex flex-col">
+                                <span className="text-[7px] font-black text-emerald-500/70 uppercase tracking-widest leading-none">Risk %</span>
+                                <div className="flex items-center">
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        min="0.1"
+                                        max="5"
+                                        value={riskPercentage}
+                                        onChange={(e) => onRiskChange(parseFloat(e.target.value))}
+                                        className="bg-transparent text-[11px] font-bold text-white w-10 outline-none border-none p-0 focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
+                                    <span className="text-[10px] font-bold text-zinc-500">%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -158,7 +214,7 @@ export function Header({
                         {signal.positionSize && (
                             <div className="flex flex-col pl-4 border-l border-white/10 text-right">
                                 <span className="text-[8px] text-blue-400 uppercase font-black tracking-tighter flex items-center justify-end gap-1">
-                                    <Sparkles className="size-2" /> Risk Size (0.5%)
+                                    <Sparkles className="size-2" /> Risk Unit ({riskPercentage}%)
                                 </span>
                                 <span className="text-[11px] font-black text-blue-400 whitespace-nowrap tabular-nums">{signal.positionSize}</span>
                             </div>

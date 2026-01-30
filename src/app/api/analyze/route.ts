@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { openai } from '@/lib/ai';
+import { supabase } from '@/lib/supabase';
 
 interface Signal {
+    id?: string;
     analysis?: string;
     signal?: {
         action: string;
@@ -30,6 +32,21 @@ function validateSignal(result: Signal, equity: number, riskPercentage: number, 
     }
 
     const signal = result.signal;
+    const action = signal.action.toUpperCase();
+    const isBuy = action === 'BUY';
+    const isSell = action === 'SELL';
+
+    if (!isBuy && !isSell) {
+        return {
+            ...result,
+            signal: {
+                ...signal,
+                status: 'NEUTRAL - NO SETUP',
+                confidence: '0%'
+            }
+        };
+    }
+
     const entry = cleanNumber(signal.entry);
     const sl = cleanNumber(signal.sl);
     const tp = cleanNumber(signal.tp);
@@ -43,18 +60,10 @@ function validateSignal(result: Signal, equity: number, riskPercentage: number, 
                 ...signal,
                 entry,
                 sl,
-                tp
+                tp,
+                status: 'FAILED'
             }
         };
-    }
-
-    // Determine trade direction
-    const action = signal.action.toUpperCase();
-    const isBuy = action === 'BUY';
-    const isSell = action === 'SELL';
-
-    if (!isBuy && !isSell) {
-        return { ...result, signal: { ...signal, status: 'NEUTRAL - NO SETUP' } };
     }
 
     // Validate SL is on the correct side
@@ -62,14 +71,14 @@ function validateSignal(result: Signal, equity: number, riskPercentage: number, 
         return {
             ...result,
             error: `Invalid BUY setup: Stop Loss ($${sl}) must be BELOW Entry ($${entry}).`,
-            signal
+            signal: { ...signal, status: 'INVALID SL' }
         };
     }
     if (isSell && sl <= entry) {
         return {
             ...result,
             error: `Invalid SELL setup: Stop Loss ($${sl}) must be ABOVE Entry ($${entry}).`,
-            signal
+            signal: { ...signal, status: 'INVALID SL' }
         };
     }
 
@@ -88,7 +97,7 @@ function validateSignal(result: Signal, equity: number, riskPercentage: number, 
         return {
             ...result,
             error: `Risk/Reward ratio is ${riskRewardRatio.toFixed(2)}:1. MINIMUM required is 2:1. Move TP further or tighten SL.`,
-            signal
+            signal: { ...signal, status: 'LOW RR' }
         };
     }
 
@@ -96,11 +105,13 @@ function validateSignal(result: Signal, equity: number, riskPercentage: number, 
     const riskAmount = equity * (riskPercentage / 100);
     let positionSizeStr = "";
 
-    // Precise position sizing for different asset classes
-    const isGold = symbol.toLowerCase().includes('xau');
-    const isSilver = symbol.toLowerCase().includes('xag');
-    const isJpy = symbol.toLowerCase().includes('jpy');
-    const isForex = !isGold && !isSilver && (symbol.includes('FX:') || symbol.includes('USD') || symbol.includes('JPY') || symbol.includes('EUR') || symbol.includes('GBP'));
+    const sym = symbol.toLowerCase();
+    const isGold = sym.includes('xau') || sym.includes('gold');
+    const isSilver = sym.includes('xag') || sym.includes('silver');
+    const isJpy = sym.includes('jpy');
+    const isCrypto = sym.includes('btc') || sym.includes('eth') || sym.includes('sol') || sym.includes('crypto');
+    const isIndex = sym.includes('us30') || sym.includes('nas100') || sym.includes('spx500') || sym.includes('ger40') || sym.includes('dji') || sym.includes('nsx') || sym.includes('spx');
+    const isForex = !isGold && !isSilver && !isCrypto && !isIndex && (sym.includes('fx:') || sym.includes('usd') || sym.includes('eur') || sym.includes('gbp') || sym.includes('aud'));
 
     if (isGold) {
         const units = riskAmount / riskDistance;
@@ -110,10 +121,14 @@ function validateSignal(result: Signal, equity: number, riskPercentage: number, 
         const units = riskAmount / riskDistance;
         const lots = (units / 5000).toFixed(2); // 1 Lot = 5000 oz
         positionSizeStr = `${lots} Lots (Silver)`;
+    } else if (isCrypto) {
+        const units = (riskAmount / riskDistance).toFixed(4);
+        positionSizeStr = `${units} Units`;
+    } else if (isIndex) {
+        const units = (riskAmount / riskDistance).toFixed(2);
+        positionSizeStr = `${units} Contracts`;
     } else if (isForex) {
         const units = riskAmount / riskDistance;
-        // For JPY pairs, the price distance for a pip is 0.01 vs 0.0001 for others.
-        // We adjust the unit calculation to account for this 100x difference.
         const lots = isJpy ? (units / 1000).toFixed(2) : (units / 100000).toFixed(2);
         positionSizeStr = `${lots} Lots`;
     } else {
@@ -158,6 +173,26 @@ export async function POST(req: Request) {
             hour12: true
         }).format(new Date());
 
+        // Fetch Feedback Loop Context
+        let historicalContext = "";
+        try {
+            const { data: history } = await supabase
+                .from('signals')
+                .select('feedback, feedback_notes, analysis')
+                .eq('symbol', symbol)
+                .not('feedback', 'is', null)
+                .order('created_at', { ascending: false })
+                .limit(5);
+
+            if (history && history.length > 0) {
+                historicalContext = history.map((h, i) =>
+                    `[Prior Trade ${i + 1}: Result ${h.feedback.toUpperCase()}]\nNotes: ${h.feedback_notes || 'No notes'}\nContext: ${h.analysis.substring(0, 200)}...`
+                ).join("\n\n");
+            }
+        } catch (dbErr) {
+            console.error('History fetch error:', dbErr);
+        }
+
         const response = await openai.chat.completions.create({
             model: "gpt-4o",
             temperature: 0,
@@ -165,66 +200,57 @@ export async function POST(req: Request) {
                 {
                     role: "system",
                     content: `You are the Nexus Elite Algorithmic Analyst. 
-Your task is to perform a professional 4-STEP TOP-DOWN analysis with 99.9% precision.
-You specialize in advanced Smart Money Concepts (SMC), ICT methods, and Institutional Order Flow.
+Your task is to perform an ultra-precise TOP-DOWN Institutional Analysis.
 
-EXPERTISE TOOLS:
-- **Order Blocks (OB)**, Breaker Blocks (BB), and Mitigation Blocks (MB).
-- **Liquidity Modules**: Identifying BSL/SSL, Liquidity Sweeps, and Inducement (IDM) traps.
-- **Structural Shifts**: MSS (Market Structure Shift) and CHoCH (Change of Character).
-- **Institutional Alignment**: Fair Value Gaps (FVG), Inversion FVGs, and Volume Imbalances.
-- **Power of 3 (AMD)**: Analyzing Accumulation, Manipulation, and Distribution phases.
-- **IRL/ERL Flow**: Tracking Internal Range Liquidity vs External Range Liquidity.
+TRADING FRAMEWORK:
+- **Smart Money Concepts (SMC)**: Order Blocks, Breakers, Fair Value Gaps (FVG).
+- **ICT Methodology**: Power of 3 (AMD), Liquidity Sweeps, Market Structure Shifts (MSS/CHoCH).
+- **Institutional Markers**: Inducement (IDM), Displacement (strong impulse), IRL/ERL Flow.
 
-STRICT OPERATING PROTOCOL:
-1. **Session Awareness**: Use the current IST time to identify the trading window (Asia, London Open, NY Killzone, or London Close) and its impact on volatility/bias.
-2. **Current Price Anchor**: Identify the CURRENT MARKET PRICE from the 1m chart axis before proposing any entry. All levels must be relative to this price.
-3. **Decimal Precision**: 
-   - For JPY pairs: Use 3 decimal places (e.g., 150.123).
-   - For Gold/Silver: Use 2 decimal places (e.g., 2050.50).
-   - For other Forex: Use 5 decimal places (e.g., 1.08505).
-4. **Multi-Timeframe Flow**: 
-   - 4H (HTF): Define dominant order flow, primary bias, and major S/D zones.
-   - 1H (MTF): Refine structural alignment, identify FVGs, and track IRL/ERL transitions.
-   - 15m (LTF): Pinpoint execution areas and confirm structural shifts.
-   - 1m (Micro): Precision entry timing, looking for micro-liquidity sweeps and immediate order flow displacement.
-5. **High Probability Only**: Confluence across ALL four timeframes is required. If structure is murky or the current price has already moved too far from the setup, stay "NEUTRAL".
-6. **Precision Pricing**: Read the Y-axis from the 1m chart for exact Entry, SL, and TP. DO NOT hallucinate numbers. Use the numbers visible on the right-side scale.
-7. **1:2 RR Minimum**: TP must target at least 2x the risk. If a 1:2 setup isn't naturally present, do not force it; mark as "NEUTRAL".
+${historicalContext ? `---
+HISTORICAL PERFORMANCE (Learn from these past outcomes):
+${historicalContext}
+---` : ""}
 
-ASSET CONTEXT: ${symbol}
-CURRENT IST TIME: ${istTime}
+ANALYSIS PROTOCOL (CHAIN OF THOUGHT):
+1. **HTF Context (4H)**: Define the dominant institutional bias. Is the market currently in an expansion or retracement?
+2. **MTF Structure (1H)**: Identify the most recent break of structure (BOS) and the current trading range.
+3. **Internal Liquidity (15m)**: Locate "Inducement" (IDM) - the liquidity trap that must be swept before entry. Look for BSL/SSL sweeps.
+4. **Execution Snapshot (1m)**: Search for "Displacement" - a high-energy move following a liquidity sweep that creates a FVG or leaves a refined OB.
+5. **Precision Entry**: Entry MUST be at the refined 1m zone. SL MUST be placed behind the liquidity sweep high/low or structural anchor.
+
+STRICT OPERATING RULES:
+- **Current Price Anchor**: Check the latest price on the 1m chart. Only propose entries that are logic-bound to this price.
+- **No Hallucinations**: Read exact levels from the TradingView Y-axis.
+- **Risk Management**: Minimum 1:2 RR. If the setup requires a wide SL that kills RR, ignore it.
+- **Neutral Bias**: If timeframes are non-confluent or inducement hasn't been swept, mark action as "NEUTRAL".
+
+ASSET: ${symbol}
+TIME (IST): ${istTime}
 EQUITY: $${equity}
-RISK: ${riskPercentage}%`
+RISK: ${riskPercentage}%
+
+RISK COMPLIANCE:
+- You MUST calculate position size based on EXACTLY ${riskPercentage}% risk of $${equity}.
+- This is a PROP FIRM account. Preservation of capital is the #1 priority.
+- If the SL is too wide or RR is less than 1:2, you MUST flag it as "LOW RR" or "INVALID SETUP".`
                 },
                 {
                     role: "user",
                     content: [
                         {
                             type: "text",
-                            text: `Analyze these four charts for ${symbol} and generate an ultra-fast scalp signal based on 4-step Top-Down confluence.
+                            text: `Perform a top-down institutional analysis for ${symbol}. 
 
-CHARTS PROVIDED:
-1. Higher Time Frame (4H)
-2. Medium Time Frame (1H)
-3. Lower Time Frame (15m)
-4. Micro Entry Frame (1m)
-
-Follow this logical flow:
-1. Describe the 4H Macro Bias.
-2. Describe the 1H Structural Refinement.
-3. Describe the 15m Setup Confirmation.
-4. Use the 1m chart to pinpoint the micro-entry trigger (Micro MSS/Fair Value Gaps).
-
-Return JSON:
+REQUIRED OUTPUT FORMAT (JSON):
 {
-  "analysis": "### 1. Macro Outlook (4H)\nFocus on macro order flow.\n\n### 2. MTF Alignment (1H)\nIdentity the key institutional levels.\n\n### 3. LTF Setup (15m)\nIdentify the confirmation area.\n\n### 4. Micro Entry (1m)\nDescribe the specific 1m trigger for the ultra-scalp.\n\n### 5. Final Confluence\nSummary of how all 4 timeframes align.",
+  "analysis": "### 1. HTF Bias (4H)\n[Details]\n\n### 2. MTF Structure (1H)\n[Details]\n\n### 3. LTF Liquidity & Inducement (15m)\n[Details on where the trap is]\n\n### 4. Micro Entry Trigger (1m)\n[Details of displacement/sweep/FVG]\n\n### 5. Institutional Logic\n**Why this SL?**: [Reason]\n**Why this TP?**: [Reason]",
   "signal": {
     "action": "BUY" | "SELL" | "NEUTRAL",
     "confidence": "XX%",
-    "entry": "Exact number from 1m chart",
-    "sl": "Exact number from 1m chart",
-    "tp": "Exact number from 1m chart",
+    "entry": "Exact number",
+    "sl": "Exact number",
+    "tp": "Exact number",
     "entryTime": "IST window",
     "exitTime": "Target window"
   }
@@ -244,7 +270,27 @@ Return JSON:
         const result = JSON.parse(response.choices[0].message.content || '{}');
         const validated = validateSignal(result, equity, riskPercentage, symbol);
 
-        return NextResponse.json(validated);
+        // Persistent Feedback Loop: Save to Supabase
+        let signalId = null;
+        try {
+            const { data, error } = await supabase
+                .from('signals')
+                .insert({
+                    symbol,
+                    analysis: validated.analysis || "",
+                    signal_data: validated.signal || {}
+                })
+                .select('id')
+                .single();
+
+            if (!error && data) {
+                signalId = data.id;
+            }
+        } catch (dbErr) {
+            console.error('Failed to save signal to DB:', dbErr);
+        }
+
+        return NextResponse.json({ ...validated, id: signalId });
     } catch (error: any) {
         console.error('Analysis error:', error.message || error);
         return NextResponse.json({

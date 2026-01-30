@@ -20,6 +20,7 @@ interface Message {
 }
 
 interface TradeSignal {
+  id?: string;
   action: 'BUY' | 'SELL' | 'NEUTRAL';
   entry: string;
   sl: string;
@@ -51,6 +52,25 @@ export default function Home() {
   const [currentSymbol, setCurrentSymbol] = useState('FX:EURUSD');
   const [isMobile, setIsMobile] = useState(false);
   const [signal, setSignal] = useState<TradeSignal | null>(null);
+  const [hasFeedback, setHasFeedback] = useState(false);
+  const [equity, setEquity] = useState(100000);
+  const [riskPercentage, setRiskPercentage] = useState(0.5);
+
+  // Persistence
+  useEffect(() => {
+    const savedEquity = localStorage.getItem('nexus_equity');
+    const savedRisk = localStorage.getItem('nexus_risk');
+    if (savedEquity) setEquity(parseInt(savedEquity));
+    if (savedRisk) setRiskPercentage(parseFloat(savedRisk));
+  }, []);
+
+  useEffect(() => {
+    if (equity) localStorage.setItem('nexus_equity', equity.toString());
+  }, [equity]);
+
+  useEffect(() => {
+    if (riskPercentage) localStorage.setItem('nexus_risk', riskPercentage.toString());
+  }, [riskPercentage]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -70,6 +90,7 @@ export default function Home() {
     setSignal(null);
     setError(null);
     setMessages([]);
+    setHasFeedback(false);
   };
 
   const startMultiCapture = () => {
@@ -119,7 +140,8 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           images: finalImages,
-          riskPercentage: 0.5,
+          riskPercentage,
+          equity,
           symbol: currentSymbol
         }),
       });
@@ -128,7 +150,7 @@ export default function Home() {
       if (!response.ok) throw new Error(data.error || 'Analysis failed');
 
       setAnalysis(data.analysis);
-      setSignal(data.signal);
+      setSignal({ ...data.signal, id: data.id });
       setState('complete');
       setHubOpen(true);
     } catch (err: any) {
@@ -164,11 +186,36 @@ export default function Home() {
     }
   };
 
+  const submitFeedback = async (type: 'win' | 'loss' | 'canceled') => {
+    if (!signal?.id || hasFeedback) return;
+
+    try {
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: signal.id,
+          feedback: type,
+        }),
+      });
+
+      if (response.ok) {
+        setHasFeedback(true);
+      }
+    } catch (err) {
+      console.error('Feedback failed:', err);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden font-sans relative">
       <Header
         currentSymbol={currentSymbol}
         onSymbolChange={setCurrentSymbol}
+        equity={equity}
+        onEquityChange={setEquity}
+        riskPercentage={riskPercentage}
+        onRiskChange={setRiskPercentage}
         signal={signal}
         onAnalyze={startMultiCapture}
         isAnalyzing={state === 'analyzing' || state.startsWith('capturing_')}
@@ -370,6 +417,48 @@ export default function Home() {
                               <ReactMarkdown>{analysis}</ReactMarkdown>
                             </div>
                           </div>
+
+                          {/* Feedback Section */}
+                          {state === 'complete' && signal?.id && !hasFeedback && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="p-4 rounded-3xl bg-blue-600/5 border border-blue-500/10 flex flex-col items-center gap-4"
+                            >
+                              <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Signal Prediction Outcome?</span>
+                              <div className="flex gap-2 w-full">
+                                <button
+                                  onClick={() => submitFeedback('win')}
+                                  className="flex-1 py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                >
+                                  ✅ Win
+                                </button>
+                                <button
+                                  onClick={() => submitFeedback('loss')}
+                                  className="flex-1 py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                >
+                                  ❌ Loss
+                                </button>
+                                <button
+                                  onClick={() => submitFeedback('canceled')}
+                                  className="flex-1 py-3 bg-zinc-500/10 hover:bg-zinc-500/20 text-zinc-400 border border-zinc-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                >
+                                  🏳️ Cancel
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+
+                          {hasFeedback && (
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              className="flex items-center justify-center gap-2 py-4"
+                            >
+                              <CheckCircle2 className="size-4 text-emerald-500" />
+                              <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Feedback Recorded. Link Updated.</span>
+                            </motion.div>
+                          )}
                         </div>
                       )}
 
